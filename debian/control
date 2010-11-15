@@ -1,0 +1,27 @@
+Source: powertop
+Section: utils
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Patrick Winnertz <winnie@debian.org>
+Uploaders: Jose Luis Rivas <ghostbar38@gmail.com>
+Build-Depends: cdbs, debhelper (>= 5), libncursesw5-dev, libncurses5-dev, dpatch
+Standards-Version: 3.7.3
+Homepage: http://www.linuxpowertop.org
+
+Package: powertop
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Suggests: cpufrequtils, laptop-mode-tools
+Description: Linux tool to find out what is using power on a laptop
+ PowerTOP is a Linux tool that finds the software component(s) that
+ make your laptop use more power than necessary while it is idle. As of
+ Linux kernel version 2.6.21, the kernel no longer has a fixed 1000Hz
+ timer tick. This will (in theory) give a huge power savings because
+ the CPU stays in low power mode for longer periods of time during
+ system idle.
+ .
+ However... there are many things that can ruin the party, both inside
+ the kernel and in userspace. PowerTOP combines various sources of
+ information from the kernel into one convenient screen so that you can
+ see how well your system is doing, and which components are the
+ biggest problem.
