@@ -43,6 +43,7 @@ extern struct line     *lines;
 extern int             linehead;
 extern int             linesize;
 extern int             linectotal;
+extern int             collectMode = 0;
 
 extern double displaytime;
 

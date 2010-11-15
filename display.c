@@ -32,6 +32,7 @@
 #include <ncurses.h>
 #include <time.h>
 #include <wchar.h>
+#include <sys/time.h>
 
 #include "powertop.h"
 
@@ -251,29 +252,47 @@ void show_pmu_power_line(unsigned sum_voltage_mV,
 
 void show_wakeups(double d, double interval, double C0time)
 {
-	printf("Wakeups-from-idle per second : %4.1f\tinterval: %0.1fs\n", d, interval);
+//	printf("Wakeups-from-idle per second : %4.1f\tinterval: %0.1fs\n", d, interval);
 }
 
 void show_timerstats(int nostats, int ticktime)
 {
 	int i;
+  int flag = 0;
+  static int mapcount = 0;
+  static char* string_list[1000];
+  static double value_list[1000] = {0};
 
 	if (!nostats) {
 		int counter = 0;
-		printf("Top causes for wakeups:\n");
 		for (i = 0; i < linehead; i++)
-			if ((lines[i].count > 0 || lines[i].disk_count > 0) && counter++ < maxtimerstats) {
-				char c = ' ';
-				if (lines[i].disk_count)
-					c = 'D';
-				if (showpids)
-					printf(" %5.1f%% (%5.1f)%c  [%6s] %s\n", lines[i].count * 100.0 / linectotal,
-						lines[i].count * 1.0 / ticktime, c,
-						lines[i].pid, lines[i].string);
-				else
-					printf(" %5.1f%% (%5.1f)%c  %s\n", lines[i].count * 100.0 / linectotal,
-						lines[i].count * 1.0 / ticktime, c,
-						lines[i].string);
+			if ((lines[i].count > 0 || lines[i].disk_count > 0) && counter++ < maxtimerstats)
+        {
+          flag = 0;
+          int k;
+          for (k = 0; k < mapcount; k++)
+            {
+              if (strncmp (string_list[k], lines[i].string, sizeof (char) * strlen (lines[i].string)) == 0)
+                {
+                  flag = 1;
+                  if ((lines[i].count - value_list[k]) * 1.0/ticktime > 100)
+                    {
+                      struct timeval tp;
+                      gettimeofday (&tp, NULL);
+                      printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, (lines[i].count - value_list[k]) * 1.0/ticktime, string_list[k]);
+                      printf ("\n");
+                    }
+                  value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
+                  break;
+                }
+            }
+          if (flag == 0)
+            {
+              string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string)));
+              strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string)));
+              value_list[mapcount] = lines[i].count;// * 1.0/ticktime;
+              mapcount++;
+            } 
 				}
 	} else {
 		if (geteuid() == 0) {
@@ -285,8 +304,6 @@ void show_timerstats(int nostats, int ticktime)
 			printf("No detailed statistics available; PowerTOP needs root privileges for that\n");
 	}
 
-
-	wrefresh(timerstat_window);
 }
 
 void show_suggestion(char *sug)

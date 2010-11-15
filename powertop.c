@@ -957,25 +957,17 @@ int main(int argc, char **argv)
 				totalticks += cur_duration[i] - last_duration[i];
 				totalevents += cur_usage[i] - last_usage[i];
 			}
-/*
-		if (!dump) {
-			if (!ncursesinited) {
-				initialize_curses();  
-				ncursesinited++;
-			}
-			setup_windows();
-			show_title_bar();
-		}
-*/
+
 		memset(&cstate_lines, 0, sizeof(cstate_lines));
 		topcstate = -4;
+/*
 		if (totalevents == 0 && maxcstate <= 1) {
 			sprintf(cstate_lines[5],_("< Detailed C-state information is not available.>\n"));
 		} else {
 			double sleept, percentage;
 			c0 = sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ - totalticks;
 			if (c0 < 0)
-				c0 = 0;	/* rounding errors in measurement might make c0 go slightly negative.. this is confusing */
+				c0 = 0;
 			sprintf(cstate_lines[0], _("Cn\t          Avg residency\n"));
 
 			percentage = c0 * 100.0 / (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
@@ -1002,8 +994,9 @@ int main(int argc, char **argv)
 					
 				}
 		}
+*/
 		do_cpufreq_stats();
-		show_cstates();
+//		show_cstates();
 		/* now the timer_stats info */
 		memset(line, 0, sizeof(line));
 		totalticks = 0;
