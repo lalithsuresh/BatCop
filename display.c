@@ -48,6 +48,10 @@ static WINDOW *status_bar_window;
 
 char status_bar_slots[10][40];
 
+static int mapcount = 0;
+static char* string_list[1000];
+static double value_list[1000] = {0};
+
 static void cleanup_curses(void) {
 	endwin();
 }
@@ -255,13 +259,32 @@ void show_wakeups(double d, double interval, double C0time)
 //	printf("Wakeups-from-idle per second : %4.1f\tinterval: %0.1fs\n", d, interval);
 }
 
-void show_timerstats(int nostats, int ticktime)
+void leave (int sig)
+{
+  FILE *fp;
+  int i;
+  char str1[1023];
+  char hostname[1023];
+
+  gethostname (hostname, 1023);
+  sprintf (str1, "traces_%s_%d", hostname, getpid ());
+
+  fp = fopen (str1, "w");
+  fprintf (stderr, "\nPreparing trace file %s\n", str1);
+  for (i = 0; i < mapcount; i++)
+    {
+      fprintf (fp, "%s %5.1f\n", string_list[i], value_list[i]);
+    }
+
+  fclose (fp);
+
+  exit (sig);
+}
+
+void show_timerstats(int nostats, int ticktime, int runMode)
 {
 	int i;
   int flag = 0;
-  static int mapcount = 0;
-  static char* string_list[1000];
-  static double value_list[1000] = {0};
 
 	if (!nostats) {
 		int counter = 0;
@@ -275,7 +298,7 @@ void show_timerstats(int nostats, int ticktime)
               if (strncmp (string_list[k], lines[i].string, sizeof (char) * strlen (lines[i].string)) == 0)
                 {
                   flag = 1;
-                  if ((lines[i].count - value_list[k]) * 1.0/ticktime > 100)
+                  if ((lines[i].count - value_list[k]) * 1.0/ticktime > 100 && runMode != TRAIN_ONLY)
                     {
                       struct timeval tp;
                       gettimeofday (&tp, NULL);
@@ -288,8 +311,8 @@ void show_timerstats(int nostats, int ticktime)
             }
           if (flag == 0)
             {
-              string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string)));
-              strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string)));
+              string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string) + 1));
+              strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string) + 1));
               value_list[mapcount] = lines[i].count;// * 1.0/ticktime;
               mapcount++;
             } 

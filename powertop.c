@@ -37,6 +37,7 @@
 #include <time.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "powertop.h"
 
@@ -838,6 +839,9 @@ void version()
 	exit(0);
 }
 
+void leave(int sig);
+
+
 int main(int argc, char **argv)
 {
 	char line[1024];
@@ -845,6 +849,8 @@ int main(int argc, char **argv)
 	FILE *file = NULL;
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
+
+  (void) signal (SIGINT, leave);
 
 	setlocale (LC_ALL, "");
 	bindtextdomain ("powertop", "/usr/share/locale");
@@ -1107,7 +1113,7 @@ int main(int argc, char **argv)
 
 		displaytime = displaytime - ticktime;
 
-		show_timerstats(nostats, ticktime);
+		show_timerstats(nostats, ticktime, MONITOR_ONLY);
 
 		if (maxsleep < 5.0)
 			ticktime = 10;
