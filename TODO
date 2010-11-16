@@ -1,0 +1,7 @@
+TODO
+----
+
+- refactor out ncurses code completely.
+- remove suggestions related code.
+- add whitelists/blacklists.
+- allow for different algorithms to be used.
