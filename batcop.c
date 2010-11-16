@@ -1,7 +1,7 @@
 ;/*
  * Copyright 2007, Intel Corporation
  *
- * This file is part of PowerTOP
+ * This file is part of PowerTOP, modified for BatCop
  *
  * This program file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +20,7 @@
  *
  * Authors:
  * 	Arjan van de Ven <arjan@linux.intel.com>
+ *  Lalith Suresh <suresh.lalith@gmail.com>
  */
 
 #include <getopt.h>
@@ -78,6 +79,7 @@ struct line	*lines;
 int		linehead;
 int		linesize;
 int		linectotal;
+int   runmode = 0;
 
 
 double last_bat_cap = 0;
@@ -849,10 +851,8 @@ int main(int argc, char **argv)
 	FILE *file = NULL;
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
-  int runmode;
   char *tracefile;
 
-  (void) signal (SIGINT, leave);
 
 	setlocale (LC_ALL, "");
 	bindtextdomain ("powertop", "/usr/share/locale");
@@ -922,11 +922,19 @@ int main(int argc, char **argv)
           exit (-1);
         }
       fprintf (stdout, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
+      monitor_mode_init (tracefile);
     }
   else if (runmode == DYNAMIC)
     {
-      fprintf (stdout, "\n Running in DYNAMIC mode\n");
+      fprintf (stdout, "\nRunning in DYNAMIC mode\n");
     }
+  else
+    {
+      fprintf (stderr, "\nError: Mode not recognised\n");
+      exit (-1);
+    }
+
+  (void) signal (SIGINT, leave);
 
 	if (!dump)
 		ticktime = 5.0;
@@ -1148,7 +1156,7 @@ int main(int argc, char **argv)
 
 		displaytime = displaytime - ticktime;
 
-		show_timerstats(nostats, ticktime, MONITOR_ONLY);
+		show_timerstats(nostats, ticktime);
 
 		if (maxsleep < 5.0)
 			ticktime = 10;

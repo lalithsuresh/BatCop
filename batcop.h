@@ -43,6 +43,7 @@ extern struct line     *lines;
 extern int             linehead;
 extern int             linesize;
 extern int             linectotal;
+extern int             runmode;
 
 extern double displaytime;
 
@@ -106,6 +107,7 @@ extern suggestion_func *suggestion_activate;
 /* Battery IDS defines */
 #define TRAIN_ONLY 0
 #define MONITOR_ONLY 1
+#define DYNAMIC 2
 
 extern int maxwidth;
 
@@ -118,7 +120,7 @@ void show_pmu_power_line(unsigned sum_voltage_mV,
                          int sum_discharge_mA);
 void show_cstates(void);
 void show_wakeups(double d, double interval, double c0time);
-void show_timerstats(int nostats, int ticktime, int runMode);
+void show_timerstats(int nostats, int ticktime);
 void show_suggestion(char *sug);
 
 void pick_suggestion(void);

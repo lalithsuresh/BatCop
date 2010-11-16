@@ -266,22 +266,62 @@ void leave (int sig)
   char str1[1023];
   char hostname[1023];
 
-  gethostname (hostname, 1023);
-  sprintf (str1, "traces_%s_%d", hostname, getpid ());
-
-  fp = fopen (str1, "w");
-  fprintf (stderr, "\nPreparing trace file %s\n", str1);
-  for (i = 0; i < mapcount; i++)
+  if (runmode != MONITOR_ONLY)
     {
-      fprintf (fp, "%s %5.1f\n", string_list[i], value_list[i]);
-    }
+      gethostname (hostname, 1023);
+      sprintf (str1, "traces_%s_%d", hostname, getpid ());
 
-  fclose (fp);
+      fp = fopen (str1, "w");
+      fprintf (stderr, "\nPreparing trace file %s\n", str1);
+      for (i = 0; i < mapcount; i++)
+        {
+          fprintf (fp, "%5.1f %s\n", value_list[i], string_list[i]);
+        }
+
+      fclose (fp);
+    }
 
   exit (sig);
 }
 
-void show_timerstats(int nostats, int ticktime, int runMode)
+/* FIXME: Need to make this more clean */
+/* FIXME: Floating point bug */
+void monitor_mode_init (char *tracefile)
+{
+  FILE *fp;
+  char *p = NULL;
+  int c;
+  float x;
+
+  fp = fopen (tracefile, "r");
+
+  while (!feof (fp))
+    {
+      fscanf (fp, "%f", &x);
+      char *tmp = NULL;
+      tmp = (char *) malloc (sizeof (char) * 1023);
+
+      // Skip as many spaces as necessary
+      while (1)
+        {
+          c = fgetc (fp);
+          if (c != ' ')
+            break;
+        }
+
+      sprintf (tmp, "%c", c); // First valid non-space character
+
+      while ((c = fgetc (fp)) && !(c == EOF || c == '\n'))
+        {
+          sprintf (tmp, "%s%c",tmp,c);
+        }
+      string_list[mapcount] = tmp;
+      value_list[mapcount] = x;
+      mapcount++;
+    } 
+}
+
+void show_timerstats(int nostats, int ticktime)
 {
 	int i;
   int flag = 0;
@@ -298,18 +338,21 @@ void show_timerstats(int nostats, int ticktime, int runMode)
               if (strncmp (string_list[k], lines[i].string, sizeof (char) * strlen (lines[i].string)) == 0)
                 {
                   flag = 1;
-                  if ((lines[i].count - value_list[k]) * 1.0/ticktime > 100 && runMode != TRAIN_ONLY)
+                  if ((lines[i].count - value_list[k]) * 1.0/ticktime > 100 && runmode != TRAIN_ONLY)
                     {
                       struct timeval tp;
                       gettimeofday (&tp, NULL);
                       printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, (lines[i].count - value_list[k]) * 1.0/ticktime, string_list[k]);
                       printf ("\n");
                     }
-                  value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
+                  if (runmode != MONITOR_ONLY)
+                    {
+                      value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
+                    }
                   break;
                 }
             }
-          if (flag == 0)
+          if (flag == 0 && runmode != MONITOR_ONLY)
             {
               string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string) + 1));
               strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string) + 1));
