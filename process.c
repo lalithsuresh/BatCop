@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <signal.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 char process_to_kill[1024];
 

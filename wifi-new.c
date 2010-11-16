@@ -40,7 +40,7 @@
 #include <linux/if.h>
 #include <linux/wireless.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 static int wext_sock = -1;
 static char wireless_nic[IFNAMSIZ + 1] = {0};

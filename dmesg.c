@@ -32,7 +32,7 @@
 #include <sys/klog.h>
 
 int klogctl(int type, char *bufp, int len);
-#include "powertop.h"
+#include "batcop.h"
 
 /* static arrays are not nice programming.. but they're easy */
 static char *dmesg_content;

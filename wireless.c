@@ -47,7 +47,7 @@
 
 
 
-#include "powertop.h"
+#include "batcop.h"
 
 
 static char wireless_nic[32];

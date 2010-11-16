@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 /* static arrays are not nice programming.. but they're easy */
 #define MAXCONFIGLINES 10000

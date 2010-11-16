@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 struct cpufreqdata {
 	uint64_t	frequency;

@@ -34,7 +34,7 @@
 #include <wchar.h>
 #include <sys/time.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 static WINDOW *title_bar_window;
 static WINDOW *cstate_window;

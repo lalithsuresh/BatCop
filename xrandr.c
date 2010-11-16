@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 int has_no_xrandr;
 

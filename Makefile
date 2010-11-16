@@ -15,23 +15,19 @@ CC?=gcc
 # libncursesw5-dev package. 
 #
 
-OBJS = powertop.o config.o process.o misctips.o bluetooth.o display.o suggestions.o wireless.o cpufreq.o \
+OBJS = batcop.o config.o process.o misctips.o bluetooth.o display.o suggestions.o wireless.o cpufreq.o \
 	sata.o xrandr.o ethernet.o cpufreqstats.o usb.o urbnum.o intelcstates.o wifi-new.o perf.o \
 	alsa-power.o ahci-alpm.o dmesg.o
 	
 
-powertop: $(OBJS) Makefile powertop.h
-	$(CC) ${CFLAGS} $(LDFLAGS) $(OBJS) -lncursesw -o powertop
+batcop: $(OBJS) Makefile batcop.h
+	$(CC) ${CFLAGS} $(LDFLAGS) $(OBJS) -lncursesw -o batcop
 	@(cd po/ && $(MAKE))
 
-powertop.8.gz: powertop.8
-	gzip -c $< > $@
-
-install: powertop powertop.8.gz
+install: batcop
 	mkdir -p ${DESTDIR}${BINDIR}
-	cp powertop ${DESTDIR}${BINDIR}
+	cp batcop ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}
-	cp powertop.8.gz ${DESTDIR}${MANDIR}
 	@(cd po/ && env LOCALESDIR=$(LOCALESDIR) DESTDIR=$(DESTDIR) $(MAKE) $@)
 
 # This is for translators. To update your po with new strings, do :
@@ -40,7 +36,7 @@ uptrans:
 	@(cd po/ && env LG=$(LG) $(MAKE) $@)
 
 clean:
-	rm -f *~ powertop powertop.8.gz po/powertop.pot DEADJOE svn-commit* *.o *.orig 
+	rm -f *~ batcop batcop.8.gz po/batcop.pot DEADJOE svn-commit* *.o *.orig 
 	@(cd po/ && $(MAKE) $@)
 
 

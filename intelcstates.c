@@ -31,7 +31,7 @@
 #include <dirent.h>
 #include <ctype.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 #ifdef __i386
 

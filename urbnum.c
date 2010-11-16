@@ -31,7 +31,7 @@
 #include <dirent.h>
 #include <assert.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 struct device_data;
 

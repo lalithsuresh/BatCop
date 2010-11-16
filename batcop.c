@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 
 uint64_t start_usage[8], start_duration[8];
@@ -849,6 +849,8 @@ int main(int argc, char **argv)
 	FILE *file = NULL;
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
+  int runmode;
+  char *tracefile;
 
   (void) signal (SIGINT, leave);
 
@@ -865,6 +867,8 @@ int main(int argc, char **argv)
  			{ "pids", 0, NULL, 'p' },
  			{ "help", 0, NULL, 'h' },
  			{ "version", 0, NULL, 'v' },
+ 			{ "mode", 1, NULL, 'm' },
+ 			{ "file", 1, NULL, 'f' },
  			{ 0, 0, NULL, 0 }
  		};
  		int index2 = 0, c;
@@ -888,10 +892,41 @@ int main(int argc, char **argv)
  		case 'v':
  			version();
  			break;
+    case 'm':
+      runmode = strtod (optarg, NULL);
+      break;
+    case 'f':
+      tracefile = optarg;
+      break;
  		default:
  			;
  		}
  	}
+
+  if (runmode == TRAIN_ONLY)
+    {
+      fprintf (stdout, "\nRunning in TRAIN_ONLY mode\n");
+      if (tracefile != NULL)
+        fprintf (stdout, "Input file will not be used\n");
+    }
+  else if (runmode == MONITOR_ONLY)
+    {
+      if (tracefile == NULL)
+        {
+          fprintf (stderr, "Error: Trace file required for MONITOR mode. Use --file to specify trace file.\n");
+          exit (-1);
+        }
+      else if (access (tracefile, R_OK) != 0)
+        {
+          fprintf (stderr, "Error: Cannot access tracefile %s", tracefile);
+          exit (-1);
+        }
+      fprintf (stdout, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
+    }
+  else if (runmode == DYNAMIC)
+    {
+      fprintf (stdout, "\n Running in DYNAMIC mode\n");
+    }
 
 	if (!dump)
 		ticktime = 5.0;

@@ -40,7 +40,7 @@
 
 #include "perf_event.h"
 
-#include "powertop.h"
+#include "batcop.h"
 
 
 /* some people have stale headers */

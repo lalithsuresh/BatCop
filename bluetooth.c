@@ -34,7 +34,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 
 /* structure definitions copied from include/net/bluetooth/hci.h from the 2.6.20 kernel */

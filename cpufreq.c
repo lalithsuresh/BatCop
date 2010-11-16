@@ -30,7 +30,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#include "powertop.h"
+#include "batcop.h"
 
 static void activate_ondemand(void)
 {

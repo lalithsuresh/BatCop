@@ -47,7 +47,7 @@
 
 
 
-#include "powertop.h"
+#include "batcop.h"
 
 void activate_WOL_suggestion(void) 
 {
