@@ -15,9 +15,7 @@ CC?=gcc
 # libncursesw5-dev package. 
 #
 
-OBJS = batcop.o config.o process.o bluetooth.o display.o wireless.o cpufreq.o \
-	sata.o xrandr.o ethernet.o cpufreqstats.o usb.o urbnum.o intelcstates.o wifi-new.o perf.o \
-	alsa-power.o ahci-alpm.o dmesg.o
+OBJS = batcop.o display.o perf.o 
 	
 
 batcop: $(OBJS) Makefile batcop.h
