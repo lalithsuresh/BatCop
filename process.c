@@ -83,8 +83,6 @@ void suggest_process_death(char *process_match, char *tokill, struct line *sline
 			char hotkey_string[300];
 			sprintf(hotkey_string, _(" K - kill %s "), tokill);
 			strcpy(process_to_kill, tokill);
-			if (minwakeups < slines[i].count)
-				add_suggestion(comment, weight, 'K' , hotkey_string, do_kill);
 			break;
 		}
 	}

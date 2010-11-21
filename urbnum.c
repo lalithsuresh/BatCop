@@ -218,8 +218,6 @@ void usb_activity_hint(void)
 				 100.0*(dev->active - dev->previous_active) / 
 				(0.00001 + dev->connected - dev->previous_connected),
 				dev->human_name);
-				add_suggestion(usb_hint,
-				1, 'U', _(" U - Enable USB suspend "), activate_usb_autosuspend);
 			}
 			total_active++;
 		}

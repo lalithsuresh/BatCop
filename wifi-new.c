@@ -195,11 +195,9 @@ void suggest_wifi_new_powersave(void)
 	if (check_wireless_unused()) {
 		sprintf(sug, _("Suggestion: Disable the unused WIFI radio by setting the interface down:\n "
 			       "ifconfig %s down\n"), wireless_nic);
-		add_suggestion(sug, 60, 'D', _(" D - disable wireless "), activate_down_suggestion);
 	} else if (check_wireless_powersave()) {
 		sprintf(sug, _("Suggestion: Enable wireless power saving mode by executing the following command:\n "
 			       " iwconfig %s power timeout 500ms\n"
 			       "This will sacrifice network performance slightly to save power."), wireless_nic);
-		add_suggestion(sug, 20, 'W', _(" W - Enable Wireless power saving "), activate_wireless_suggestion);
 	}
 }

@@ -58,6 +58,4 @@ void suggest_on_dmesg(char *string, char *comment, int weight)
 {
 	read_dmesg();
 
-	if (strstr(dmesg_content, string))
-		add_suggestion(comment, weight, 0, NULL, NULL);
 }

@@ -124,13 +124,6 @@ void suggest_WOL_off(void)
         ioctl(sock, SIOCETHTOOL, &ifr);
 
 	if (wol.wolopts) {
-		add_suggestion(_(
-			"Disable Ethernet Wake-On-Lan with the following command:\n"
-			"  ethtool -s eth0 wol d \n"
-			"Wake-on-Lan keeps the phy active, this costs power."), 5, 
-			'W', _(" W - disable Wake-On-Lan "), activate_WOL_suggestion);
-
-
 	}
 
 	close(sock);

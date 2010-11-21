@@ -99,9 +99,5 @@ void suggest_sata_alpm(void)
 	closedir(dir);
 
 	if (need_hint) {
-		add_suggestion(_("Suggestion: Enable SATA ALPM link power management via: \n"
-				 "  echo min_power > /sys/class/scsi_host/host0/link_power_management_policy\n"
-				 "or press the S key."),
-				15, 'S', _(" S - SATA Link Power Management "), activate_alpm);
 	}
 }

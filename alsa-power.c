@@ -191,8 +191,6 @@ void alsa_activity_hint(void)
 				 100.0*(dev->power_on - dev->previous_power_on) / 
 				(0.00001 + dev->power_on + dev->power_off - dev->previous_power_on - dev->previous_power_off),
 				dev->human_name);
-				add_suggestion(alsa_hint,
-				1, 'A', _(" A - Turn HD audio powersave on "), hda_power_on);
 			}
 			total_active++;
 		}

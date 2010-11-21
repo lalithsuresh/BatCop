@@ -1063,8 +1063,6 @@ int main(int argc, char **argv)
 		if (file)
 			pclose(file);
 
-		reset_suggestions();
-
 		parse_data_dirty_buffer();
 
 		if (strstr(line, "total events")) {
@@ -1091,7 +1089,7 @@ int main(int argc, char **argv)
 
 		displaytime = displaytime - ticktime;
 
-		show_timerstats(nostats, ticktime);
+		compute_timerstats(nostats, ticktime);
 
 		if (maxsleep < 5.0)
 			ticktime = 10;

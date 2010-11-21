@@ -233,7 +233,6 @@ static void parse_event(void *ptr, int verbose)
 		suggested = 1;
 		sprintf(line,_("The program '%s' is writing to file '%s' on /dev/%s.\nThis prevents the disk from going to powersave mode."),
 			event->inode.comm, event->inode.file, event->inode.dev);
-		add_suggestion(line, 30, 0, NULL, NULL);
 	}
 	if (verbose) 
 		printf(_("The application '%s' is writing to file '%s' on /dev/%s\n"),

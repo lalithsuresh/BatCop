@@ -308,18 +308,15 @@ void suggest_wireless_powersave(void)
 		sprintf(sug, _("Suggestion: Enable wireless power saving mode by executing the following command:\n "
 			       " iwpriv %s set_power 5 \n"
 			       "This will sacrifice network performance slightly to save power."), wireless_nic);
-		add_suggestion(sug, 20, 'W', _(" W - Enable wireless power saving "), activate_wireless_suggestion);
 	}
 	if (ret >= 0 && need_wireless_suggest_new()) {
 		sprintf(sug, _("Suggestion: Enable wireless power saving mode by executing the following command:\n "
 			       " echo 5 > %s \n"
 			       "This will sacrifice network performance slightly to save power."), powersave_path);
-		add_suggestion(sug, 20, 'W', _(" W - Enable wireless power saving "), activate_wireless_suggestion_new);
 	}
 	if (ret>0) {
 		sprintf(sug, _("Suggestion: Disable the unused WIFI radio by executing the following command:\n "
 			       " echo 1 > %s \n"), rfkill_path);
-		add_suggestion(sug, 60, 'I', _(" I - disable WIFI Radio "), activate_rfkill_suggestion);
 
 	}
 }

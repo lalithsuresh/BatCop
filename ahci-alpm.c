@@ -255,8 +255,6 @@ void ahci_activity_hint(void)
 				sprintf(ahci_hint, _("A SATA device is active %1.1f%% of the time:\n%s"),
 				 100.0*(dev->active - dev->previous_active) / (0.00001 + dev->total - dev->previous_total),
 				dev->human_name);
-				add_suggestion(ahci_hint,
-				15, 'S', _(" S - SATA Link Power Management "), activate_alpm);
 			}
 			total_active++;
 		}

@@ -111,9 +111,6 @@ void suggest_usb_autosuspend(void)
 	closedir(dir);
 
 	if (need_hint) {
-		add_suggestion(_("Suggestion: Enable USB autosuspend for non-input devices by pressing the U key\n"
-				 ),
-				45, 'U', _(" U - Enable USB suspend "), activate_usb_autosuspend);
 	}
 }
 

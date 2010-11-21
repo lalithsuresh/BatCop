@@ -110,11 +110,4 @@ void suggest_ondemand_governor(void)
 	/* FIXME: check if this is fair on all cpus */
 	if (strstr(gov, "performance"))
 		ret = 1;
-
-
-	if (ret) {
-		add_suggestion(_("Suggestion: Enable the ondemand cpu speed governor for all processors via: \n"
-				 " echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \n"),
-				15, 'O', _(" O - enable Ondemand governor "), activate_ondemand);
-	}
 }

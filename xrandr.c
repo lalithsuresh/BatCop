@@ -71,12 +71,5 @@ void suggest_xrandr_TV_off(void)
 		
 	}
 	pclose(file);
-	if (has_tv_active)
-		add_suggestion(_("Suggestion: disable TV out via: \n"
-				 "  xrandr --output TV --off \n"
-				 "or press the V key."),
-				35, 'V', _(" V - Disable TV out "), activate_noTV);	
-	/* check this only once if no suggestion needed */
-	else
-		has_no_xrandr = 1;
+	has_no_xrandr = 1;
 }
