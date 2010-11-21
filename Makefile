@@ -1,6 +1,6 @@
 BINDIR=../bin
-LOCALESDIR=/usr/share/locale
-MANDIR=/usr/share/man/man8
+LOCALESDIR=../share/locals
+MANDIR=../share/man/man8
 WARNFLAGS=-Wall  -W -Wshadow
 CFLAGS?=-O1 -g ${WARNFLAGS}
 CC?=gcc

@@ -249,9 +249,6 @@ void parse_data_dirty_buffer(void)
 	if (perf_fd < 0)
 		return;
 
-	if (dump)
-		printf(_("Disk accesses:\n"));
-
 	while (pc->data_tail != pc->data_head && i++ < 5000) {
 		while (pc->data_tail >= 128U * getpagesize())
 			pc->data_tail -= 128 * getpagesize();
@@ -266,8 +263,7 @@ void parse_data_dirty_buffer(void)
 		while (pc->data_tail >= 128U * getpagesize())
 			pc->data_tail -= 128 * getpagesize();
 
-		if (header->type == PERF_RECORD_SAMPLE)
-			parse_event(header, dump);
+  	parse_event(header, 0);
 	}
 	pc->data_tail = pc->data_head;
 }

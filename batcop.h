@@ -65,6 +65,7 @@ void suggest_WOL_off(void);
 void suggest_writeback_time(void);
 void suggest_usb_autosuspend(void);
 void usb_activity_hint(void);
+void monitor_mode_init();
 
 
 
@@ -74,7 +75,6 @@ extern char cpufreqstrings[6][80];
 
 extern int topcstate;
 extern int topfreq;  
-extern int dump;
 
 extern int showpids;
 

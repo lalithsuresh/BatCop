@@ -44,7 +44,7 @@ static WINDOW *timerstat_window;
 static WINDOW *suggestion_window;
 static WINDOW *status_bar_window;
 
-#define print(win, y, x, fmt, args...) do { if (dump) printf(fmt, ## args); else mvwprintw(win, y, x, fmt, ## args); } while (0)
+#define print(win, y, x, fmt, args...) do { mvwprintw(win, y, x, fmt, ## args); } while (0)
 
 char status_bar_slots[10][40];
 

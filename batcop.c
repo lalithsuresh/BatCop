@@ -56,8 +56,6 @@ int showpids = 0;
 static int maxcstate = 0;
 int topcstate = 0;
 
-int dump = 0;
-
 #define IRQCOUNT 150
 
 struct irqdata {
@@ -131,16 +129,6 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid)
 	if (pid)
 		strcpy(lines[linehead].pid, pid);
 	linehead++;
-}
-
-void clear_lines(void)
-{
-	int i;
-	for (i = 0; i < linehead; i++)
-		free (lines[i].string);
-	free (lines);
-	linehead = linesize = 0;
-	lines = NULL;
 }
 
 void count_lines(void)
@@ -827,7 +815,8 @@ char cstate_lines[12][200];
 void usage()
 {
 	printf(_("Usage: powertop [OPTION...]\n"));
-	printf(_("  -d, --dump            read wakeups once and print list of top offenders\n"));
+	printf(_("  -m, --mode            0 == TRAIN_ONLY, 1 == MONITOR_ONLY, 2 == DYNAMIC_ONLY\n"));
+	printf(_("  -f, --file            input file for MONITOR_ONLY mode\n"));
 	printf(_("  -t, --time=DOUBLE     default time to gather data in seconds\n"));
 	printf(_("  -p, --pids            show pids in wakeups list\n"));
 	printf(_("  -h, --help            Show this help message\n"));
@@ -847,22 +836,15 @@ void leave(int sig);
 int main(int argc, char **argv)
 {
 	char line[1024];
-	int ncursesinited=0;
 	FILE *file = NULL;
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
-  char *tracefile;
-
-
-	setlocale (LC_ALL, "");
-	bindtextdomain ("powertop", "/usr/share/locale");
-	textdomain ("powertop");
+  char *tracefile = NULL;
 
 	start_data_dirty_capture();
 
  	while (1) {
  		static struct option opts[] = {
- 			{ "dump", 0, NULL, 'd' },
  			{ "time", 1, NULL, 't' },
  			{ "pids", 0, NULL, 'p' },
  			{ "help", 0, NULL, 'h' },
@@ -877,9 +859,6 @@ int main(int argc, char **argv)
  		if (c == -1)
  			break;
  		switch (c) {
- 		case 'd':
- 			dump = 1;
- 			break;
  		case 't':
  			ticktime = strtod(optarg, NULL);
  			break;
@@ -936,9 +915,6 @@ int main(int argc, char **argv)
 
   (void) signal (SIGINT, leave);
 
-	if (!dump)
-		ticktime = 5.0;
- 
 	system("/sbin/modprobe cpufreq_stats > /dev/null 2>&1");
 	read_data(&start_usage[0], &start_duration[0]);
 
@@ -959,12 +935,10 @@ int main(int argc, char **argv)
 
 	memset(cur_usage, 0, sizeof(cur_usage));
 	memset(cur_duration, 0, sizeof(cur_duration));
-	printf("PowerTOP " VERSION "   (C) 2007, 2008 Intel Corporation \n\n");
 	if (geteuid() != 0)
-		printf(_("PowerTOP needs to be run as root to collect enough information\n"));
+		printf(_("BatCop needs to be run as root to collect enough information\n"));
 	printf(_("Collecting data for %i seconds \n"), (int)ticktime);
 	printf("\n\n");
-	print_intel_cstates();
 	stop_timerstats();
 
 	while (1) {
@@ -981,8 +955,7 @@ int main(int argc, char **argv)
 
 
 		FD_ZERO(&rfds);
-		if (!dump)
-			FD_SET(0, &rfds);
+		FD_SET(0, &rfds);
 		tv.tv_sec = ticktime;
 		tv.tv_usec = (ticktime - tv.tv_sec) * 1000000;
 		do_proc_irq();
@@ -995,7 +968,6 @@ int main(int argc, char **argv)
 
 
 		stop_timerstats();
-		clear_lines();
 		do_proc_irq();
 		read_data(&cur_usage[0], &cur_duration[0]);
 
@@ -1009,43 +981,8 @@ int main(int argc, char **argv)
 
 		memset(&cstate_lines, 0, sizeof(cstate_lines));
 		topcstate = -4;
-/*
-		if (totalevents == 0 && maxcstate <= 1) {
-			sprintf(cstate_lines[5],_("< Detailed C-state information is not available.>\n"));
-		} else {
-			double sleept, percentage;
-			c0 = sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ - totalticks;
-			if (c0 < 0)
-				c0 = 0;
-			sprintf(cstate_lines[0], _("Cn\t          Avg residency\n"));
 
-			percentage = c0 * 100.0 / (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
-			sprintf(cstate_lines[1], _("C0 (cpu running)        (%4.1f%%)\n"), percentage);
-			if (percentage > 50)
-				topcstate = 0;
-			for (i = 0; i < 8; i++)
-				if (cur_usage[i]) {
-					sleept = (cur_duration[i] - last_duration[i]) / (cur_usage[i] - last_usage[i]
-											+ 0.1) / FREQ;
-					percentage = (cur_duration[i] -
-					      last_duration[i]) * 100 /
-					     (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
-
-					if (cnames[i][0]==0)
-						sprintf(cnames[i],"C%i",i+1);
-					sprintf
-					    (cstate_lines[2+i], _("%s\t%5.1fms (%4.1f%%)\n"),
-					     cnames[i], sleept, percentage);
-					if (maxsleep < sleept)
-						maxsleep = sleept;
-					if (percentage > 50)
-						topcstate = i+1;
-					
-				}
-		}
-*/
 		do_cpufreq_stats();
-//		show_cstates();
 		/* now the timer_stats info */
 		memset(line, 0, sizeof(line));
 		totalticks = 0;
@@ -1150,9 +1087,7 @@ int main(int argc, char **argv)
 		count_usb_urbs();
 		do_alsa_stats();
 		do_ahci_stats();
-//		print_battery_sysfs();
 		count_lines();
-		sort_lines();
 
 		displaytime = displaytime - ticktime;
 
@@ -1169,160 +1104,13 @@ int main(int argc, char **argv)
 		else
 			ticktime = 45;
 
-/*
-		if (key) {
-			char keychar;
-			int keystroke = fgetc(stdin);
-			if (keystroke == EOF)
-				exit(EXIT_SUCCESS);
-
-			keychar = toupper(keystroke);
-			if (keychar == 'Q')
-				exit(EXIT_SUCCESS);
-			if (keychar == 'R')
-				ticktime = 3;
-			if (keychar == suggestion_key && suggestion_activate) {
-				suggestion_activate();
-				ticktime = 2;
-				displaytime = -1.0;
-			} else
-			if (keychar == 'P')
-				showpids = !showpids;
-		}
-*/
 		if (wakeups_per_second < 0)
 			ticktime = 2;
 
-/*
-		reset_suggestions2();
-
-		suggest_kernel_config("CONFIG_USB_SUSPEND", 1,
-				    _("Suggestion: Enable the CONFIG_USB_SUSPEND kernel configuration option.\nThis option will automatically disable UHCI USB when not in use, and may\nsave approximately 1 Watt of power."), 20);
-		suggest_kernel_config("CONFIG_CPU_FREQ_GOV_ONDEMAND", 1,
-				    _("Suggestion: Enable the CONFIG_CPU_FREQ_GOV_ONDEMAND kernel configuration option.\n"
-				      "The 'ondemand' CPU speed governor will minimize the CPU power usage while\n" "giving you performance when it is needed."), 5);
-		suggest_kernel_config("CONFIG_NO_HZ", 1, _("Suggestion: Enable the CONFIG_NO_HZ kernel configuration option.\nThis option is required to get any kind of longer sleep times in the CPU."), 50);
-		suggest_kernel_config("CONFIG_ACPI_BATTERY", 1, _("Suggestion: Enable the CONFIG_ACPI_BATTERY kernel configuration option.\n "
-				      "This option is required to get power estimages from PowerTOP"), 5);
-		suggest_kernel_config("CONFIG_HPET_TIMER", 1,
-				    _("Suggestion: Enable the CONFIG_HPET_TIMER kernel configuration option.\n"
-				      "Without HPET support the kernel needs to wake up every 20 milliseconds for \n" "some housekeeping tasks."), 10);
-		if (!access("/sys/module/snd_ac97_codec", F_OK) &&
-			access("/sys/module/snd_ac97_codec/parameters/power_save", F_OK))
-			suggest_kernel_config("CONFIG_SND_AC97_POWER_SAVE", 1,
-				    _("Suggestion: Enable the CONFIG_SND_AC97_POWER_SAVE kernel configuration option.\n"
-				      "This option will automatically power down your sound codec when not in use,\n"
-				      "and can save approximately half a Watt of power."), 20);
-		suggest_kernel_config("CONFIG_IRQBALANCE", 0,
-				      _("Suggestion: Disable the CONFIG_IRQBALANCE kernel configuration option.\n" "The in-kernel irq balancer is obsolete and wakes the CPU up far more than needed."), 3);
-		suggest_kernel_config("CONFIG_CPU_FREQ_STAT", 1,
-				    _("Suggestion: Enable the CONFIG_CPU_FREQ_STAT kernel configuration option.\n"
-				      "This option allows PowerTOP to show P-state percentages \n" "P-states correspond to CPU frequencies."), 2);
-		suggest_kernel_config("CONFIG_INOTIFY", 1,
-				    _("Suggestion: Enable the CONFIG_INOTIFY kernel configuration option.\n"
-				      "This option allows programs to wait for changes in files and directories\n" 
-				      "instead of having to poll for these changes"), 5);
-*/
-
-		/* suggest to stop beagle if it shows up in the top 20 and wakes up more than 10 times in the measurement */
-/*
-		suggest_process_death("beagled : schedule_timeout", "beagled", lines, min(linehead,20), 10.0,
-				    _("Suggestion: Disable or remove 'beagle' from your system. \n"
-				      "Beagle is the program that indexes for easy desktop search, however it's \n"
-				      "not very efficient and costs a significant amount of battery life."), 30);
-		suggest_process_death("beagled : futex_wait (hrtimer_wakeup)", "beagled", lines, min(linehead,20), 10.0,
-				    _("Suggestion: Disable or remove 'beagle' from your system. \n"
-				      "Beagle is the program that indexes for easy desktop search, however it's \n"
-				      "not very efficient and costs a significant amount of battery life."), 30);
-*/
-		/* suggest to stop gnome-power-manager *only* if it shows up in the top 10 and wakes up more than 10 times in the measurement */
-		/* note to distribution makers: There is no need to patch this out! */
-		/* If you ship a recent enough g-p-m, the warning will not be there, */
- 	/* and if you ship a really old one the warning is really justified. */
-/*
-		suggest_process_death("gnome-power-man : schedule_timeout (process_timeout)", "gnome-power-manager", lines, min(linehead,10), 10.0,
-				    _("Suggestion: Disable or remove 'gnome-power-manager' from your system. \n"
-				      "Older versions of gnome-power-manager wake up far more often than \n"
-				      "needed costing you some power."), 5);
-*/
-		/* suggest to stop pcscd if it shows up in the top 50 and wakes up at all*/
-/*
-		suggest_process_death("pcscd : ", "pcscd", lines, min(linehead,50), 1.0,
-				    _("Suggestion: Disable or remove 'pcscd' from your system. \n"
-				      "pcscd tends to keep the USB subsystem out of power save mode\n"
-				      "and your processor out of deeper powersave states."), 30);
-
-*/
-		/* suggest to stop hal polilng if it shows up in the top 50 and wakes up too much*/
-/*
-		suggest_process_death("hald-addon-stor : ", "hald-addon-storage", lines, min(linehead,50), 2.0,
-				    _( "Suggestion: Disable 'hal' from polling your cdrom with:  \n" 
-				       "hal-disable-polling --device /dev/cdrom 'hal' is the component that auto-opens a\n"
-				       "window if you plug in a CD but disables SATA power saving from kicking in."), 30);
-*/
-		/* suggest to kill sealert; it wakes up 10 times/second on a default F7 install*/
-/*
-		suggest_process_death("/usr/bin/sealer : schedule_timeout (process_timeout)", "-/usr/bin/sealert", lines, min(linehead,20), 20.0,
-				    _("Disable the SE-Alert software by removing the 'setroubleshoot-server' rpm\n"
-				      "SE-Alert alerts you about SELinux policy violations, but also\n"
-				      "has a bug that wakes it up 10 times per second."), 20);
-
-		suggest_on_dmesg("failed to find CxSR latency, disabling CxSR",
-			_("The Intel Integrated Graphics driver failed to enable Memory "
-			  "self refresh.\nMemory Self Refresh is important for "
-			  "good memory power savings.\nPlease check your OS "
-			  "vendor for a kernel update and/or report a bug."),
-			  10);
-
-		suggest_bluetooth_off();
-		suggest_nmi_watchdog();
-		if (maxsleep > 15.0)
-			suggest_hpet();
-		suggest_ac97_powersave();
-		suggest_hda_powersave();
-		suggest_wireless_powersave();
-		suggest_wifi_new_powersave();
-		suggest_ondemand_governor();
-		suggest_noatime();
-		suggest_sata_alpm();
-		suggest_powersched();
-		suggest_xrandr_TV_off();
-		suggest_WOL_off();
-		suggest_writeback_time();
-		suggest_usb_autosuspend();
-
-		usb_activity_hint();
-		alsa_activity_hint();
-		ahci_activity_hint();
-*/
-		if (dump) {
-			print_all_suggestions();
-			display_usb_activity();
-			display_alsa_activity();
-			display_ahci_activity();
-			exit(EXIT_SUCCESS);
-		}
-/*
-		if (!key)
-			pick_suggestion();
-		show_title_bar();
-
-		fflush(stdout);*/
-/*
-		if (!key && ticktime >= 4.8) {
-			FD_ZERO(&rfds);
-			FD_SET(0, &rfds);
-			tv.tv_sec = 3;
-			tv.tv_usec = 0;
-			key = select(1, &rfds, NULL, NULL, &tv);
-		}
-*/
 		read_data(&cur_usage[0], &cur_duration[0]);
 		memcpy(last_usage, cur_usage, sizeof(last_usage));
 		memcpy(last_duration, cur_duration, sizeof(last_duration));
 
-
-		
 	}
 
 	end_data_dirty_capture();
