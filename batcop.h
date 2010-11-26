@@ -23,12 +23,18 @@
  */
 
 
+
+
 #ifndef __INCLUDE_GUARD_POWERTOP_H_
 #define __INCLUDE_GUARD_POWERTOP_H_
 
 #include <libintl.h>
 
 #define VERSION "1.12"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct line {
 	char	*string;
@@ -155,3 +161,8 @@ void suggest_on_dmesg(char *string, char *comment, int weight);
 
 
 #endif
+
+#ifdef __cplusplus
+}
+#endif
+
