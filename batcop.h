@@ -159,10 +159,8 @@ void activate_alpm(void);
 
 void suggest_on_dmesg(char *string, char *comment, int weight);
 
-
-#endif
-
 #ifdef __cplusplus
 }
 #endif
 
+#endif
