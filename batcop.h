@@ -20,13 +20,14 @@
  *
  * Authors:
  * 	Arjan van de Ven <arjan@linux.intel.com>
+ *  Lalith Suresh <suresh.lalith@gmail.com>
  */
 
 
 
 
-#ifndef __INCLUDE_GUARD_POWERTOP_H_
-#define __INCLUDE_GUARD_POWERTOP_H_
+#ifndef __INCLUDE_GUARD_BATCOP_H_
+#define __INCLUDE_GUARD_BATCOP_H_
 
 #include <libintl.h>
 
