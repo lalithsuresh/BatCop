@@ -34,6 +34,8 @@
 #include <sys/time.h>
 
 #include "batcop.h"
+#include "ap.h"
+#include "alglibinternal.h"
 
 static WINDOW *battery_power_window;
 
@@ -112,6 +114,10 @@ void show_wakeups(double d, double interval, double C0time)
 //	printf("Wakeups-from-idle per second : %4.1f\tinterval: %0.1fs\n", d, interval);
 }
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 void leave (int sig)
 {
   FILE *fp;
@@ -136,6 +142,10 @@ void leave (int sig)
 
   exit (sig);
 }
+
+#ifdef __cplusplus
+} //extern "C"
+#endif
 
 /* FIXME: Need to make this more clean */
 /* FIXME: Floating point bug */
