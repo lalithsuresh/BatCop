@@ -42,8 +42,10 @@
 
 #include "batcop.h"
 
+#ifdef __cplusplus
 extern "C"
 {
+#endif
 
 uint64_t start_usage[8], start_duration[8];
 uint64_t last_usage[8], last_duration[8];
@@ -1105,7 +1107,9 @@ int run_batcop(int argc, char **argv)
 	return 0;
 }
 
-}
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 int main (int argc, char **argv)
 {
