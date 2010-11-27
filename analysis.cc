@@ -204,8 +204,6 @@ void compute_timerstats(int nostats, int ticktime)
                     {
                       struct timeval tp;
                       gettimeofday (&tp, NULL);
-                      printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, lines[i].count * 1.0/ticktime, string_list[k]);
-                      printf ("\n");
                     }
                   if (runmode != MONITOR_ONLY)
                     {

@@ -53,41 +53,8 @@ extern int             runmode;
 
 extern double displaytime;
 
-void suggest_process_death(char *process_match, char *process_name, struct line *slines, int linecount, double minwakeups, char *comment, int weight);
-void suggest_kernel_config(char *string, int onoff, char *comment, int weight);
-void suggest_bluetooth_off(void);
-void suggest_nmi_watchdog(void);
-void suggest_hpet(void);
-void suggest_ac97_powersave(void);
-void suggest_hda_powersave(void);
-void suggest_wireless_powersave(void);
-void suggest_wifi_new_powersave(void);
-void suggest_ondemand_governor(void);
-void suggest_noatime(void);
-void suggest_sata_alpm(void);
-void suggest_powersched(void);
-void suggest_xrandr_TV_off(void);
-void suggest_WOL_off(void);
-void suggest_writeback_time(void);
-void suggest_usb_autosuspend(void);
-void usb_activity_hint(void);
 void monitor_mode_init(char *tracefile);
-
-
-
-
-extern char cstate_lines[12][200];
-extern char cpufreqstrings[6][80];
-
-extern int topcstate;
-extern int topfreq;  
-
-extern int showpids;
-
-extern char status_bar_slots[10][40];
-extern char suggestion_key;
-extern suggestion_func *suggestion_activate; 
-
+void show_wakeups(double d, double interval, double C0time);
 
 /* min definition borrowed from the Linux kernel */
 #define min(x,y) ({ \
@@ -115,54 +82,24 @@ extern suggestion_func *suggestion_activate;
 #define MONITOR_ONLY 1
 #define DYNAMIC 2
 
-extern int maxwidth;
 
-void show_title_bar(void);
-void setup_windows(void);
-void initialize_curses(void);
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t time);
 void show_pmu_power_line(unsigned sum_voltage_mV,
                          unsigned sum_charge_mAh, unsigned sum_max_charge_mAh,
                          int sum_discharge_mA);
-void show_cstates(void);
-void show_wakeups(double d, double interval, double c0time);
+
 void compute_timerstats(int nostats, int ticktime);
-void show_suggestion(char *sug);
 
 void push_line(char *string, int count);
 void push_line_pid(char *string, int cpu_count, int disk_count, char *pid);
 
 
-void  do_cpufreq_stats(void);
-void count_usb_urbs(void);
-void alsa_activity_hint(void);
-void display_alsa_activity(void);
-void do_alsa_stats(void);
-
-void ahci_activity_hint(void);
-void display_ahci_activity(void);
-void do_ahci_stats(void);
-
-
-
-void display_usb_activity(void);
-void activate_usb_autosuspend(void);
-void print_intel_cstates(void);
-
 void start_data_dirty_capture(void);
 void end_data_dirty_capture(void);
 void parse_data_dirty_buffer(void);
 
-
-void hda_power_on(void);
-void activate_alpm(void);
-
-void suggest_on_dmesg(char *string, char *comment, int weight);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
-
-void lolz ();
 
 #endif
