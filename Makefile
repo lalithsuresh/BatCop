@@ -3,7 +3,6 @@ LOCALESDIR=../share/locals
 MANDIR=../share/man/man8
 WARNFLAGS=-Wall  -W -Wshadow
 CFLAGS?=-O1 -g ${WARNFLAGS}
-CC?=gcc
 
 
 # 
@@ -15,11 +14,13 @@ CC?=gcc
 # libncursesw5-dev package. 
 #
 
-OBJS = batcop.o display.o perf.o 
-	
+OBJS = batcop.o analysis.o perf.o\
+       alglibinternal.o alglibmisc.o ap.o\
+       dataanalysis.o optimization.o linalg.o\
+	     specialfunctions.o statistics.o solvers.o
 
 batcop: $(OBJS) Makefile batcop.h
-	$(CC) ${CFLAGS} $(LDFLAGS) $(OBJS) -lncursesw -o batcop
+	g++ ${CFLAGS} $(LDFLAGS) $(OBJS) -lncursesw -o batcop
 	@(cd po/ && $(MAKE))
 
 install: batcop

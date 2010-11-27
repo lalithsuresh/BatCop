@@ -42,6 +42,8 @@
 
 #include "batcop.h"
 
+extern "C"
+{
 
 uint64_t start_usage[8], start_duration[8];
 uint64_t last_usage[8], last_duration[8];
@@ -98,7 +100,7 @@ void push_line(char *string, int count)
 			return;
 		}
 	if (linehead == linesize)
-		lines = realloc (lines, (linesize ? (linesize *= 2) : (linesize = 64)) * sizeof (struct line));
+		lines = (struct line*) realloc (lines, (linesize ? (linesize *= 2) : (linesize = 64)) * sizeof (struct line));
 	memset(&lines[linehead], 0, sizeof(&lines[0]));
 	lines[linehead].string = strdup (string);
 	lines[linehead].count = count;
@@ -121,7 +123,7 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid)
 			return;
 		}
 	if (linehead == linesize)
-		lines = realloc (lines, (linesize ? (linesize *= 2) : (linesize = 64)) * sizeof (struct line));
+		lines = (struct line *) realloc (lines, (linesize ? (linesize *= 2) : (linesize = 64)) * sizeof (struct line));
 	memset(&lines[linehead], 0, sizeof(&lines[0]));
 	lines[linehead].string = strdup (string);
 	lines[linehead].count = cpu_count;
@@ -524,7 +526,7 @@ void start_timerstats(void)
 
 int line_compare (const void *av, const void *bv)
 {
-	const struct line	*a = av, *b = bv;
+	const struct line	*a = (const struct line *) av, *b = (const struct line *)bv;
 	return (b->count + 50 * b->disk_count) - (a->count + 50 * a->disk_count);
 }
 
@@ -833,7 +835,7 @@ void version()
 void leave(int sig);
 
 
-int main(int argc, char **argv)
+int run_batcop(int argc, char **argv)
 {
 	char line[1024];
 	FILE *file = NULL;
@@ -1101,4 +1103,12 @@ int main(int argc, char **argv)
 
 	end_data_dirty_capture();
 	return 0;
+}
+
+}
+
+int main (int argc, char **argv)
+{
+  run_batcop (argc, argv);
+  return 0;
 }
