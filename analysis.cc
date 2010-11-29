@@ -1,7 +1,4 @@
 /*
- * Copyright 2007, Intel Corporation
- *
- *
  * This program file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation; version 2 of the License.
@@ -36,6 +33,7 @@
 #include "batcop.h"
 #include "ap.h"
 #include "alglibinternal.h"
+#include "dataanalysis.h"
 
 static WINDOW *battery_power_window;
 
@@ -48,6 +46,8 @@ static char* string_list[1000];
 static double value_list[1000] = {0};
 
 int maxtimerstats = 50;
+
+alglib::real_2d_array r2a;
 
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 {
@@ -125,6 +125,17 @@ void leave (int sig)
   char str1[1023];
   char hostname[1023];
 
+  alglib::ae_int_t x;
+  alglib::real_1d_array w;
+  alglib::fisherlda (r2a, 100, 2, 2, x, w);
+
+  printf ("\nFisher Algorithm has returned status: %d\n",x);
+  for (int i = 0; i < 2; i++)
+    {
+      printf ("%f ", w[i]);
+    }
+  printf ("\n");
+
   if (runmode != MONITOR_ONLY)
     {
       gethostname (hostname, 1023);
@@ -146,6 +157,12 @@ void leave (int sig)
 #ifdef __cplusplus
 } //extern "C"
 #endif
+
+void training_mode_init ()
+{
+  r2a.setlength (100,3);
+}
+
 
 /* FIXME: Need to make this more clean */
 /* FIXME: Floating point bug */
@@ -187,6 +204,7 @@ void compute_timerstats(int nostats, int ticktime)
 {
 	int i;
   int flag = 0;
+  static int numsamples = 0;
 
 	if (!nostats) {
 		int counter = 0;
@@ -204,11 +222,28 @@ void compute_timerstats(int nostats, int ticktime)
                     {
                       struct timeval tp;
                       gettimeofday (&tp, NULL);
+                      printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, lines[i].count * 1.0/ticktime, string_list[k]);
+                      printf ("\n");
                     }
                   if (runmode != MONITOR_ONLY)
                     {
                       value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
-                      printf ("%5.1f %5.1f\t: %s\n", value_list[k] * 1.0/ticktime, lines[i].count * 1.0/ticktime, string_list[k]);
+                      if (strncmp (lines[i].string, "[iwlagn] <interrupt>", sizeof (char) * strlen (lines[i].string)) == 0)
+                        {
+                          if (numsamples != 100)
+                            {
+                              r2a[numsamples][0] = lines[i].count * 1.0/ticktime;
+                              r2a[numsamples][1] = lines[i].disk_count;
+                              r2a[numsamples][2] = 0;
+                              numsamples++;
+                            }
+                          else
+                            {
+                              printf ("\nPrinting collected samples\n");
+                              for (int t =0 ; t < 100; t++)
+                                printf ("%f ", r2a[t][0]);
+                            }
+                        }
                     }
                   break;
                 }

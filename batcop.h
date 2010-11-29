@@ -30,6 +30,7 @@
 #define __INCLUDE_GUARD_BATCOP_H_
 
 #include <libintl.h>
+#include "ap.h"
 
 #define VERSION "1.12"
 
@@ -55,6 +56,7 @@ extern int             runmode;
 extern double displaytime;
 
 void monitor_mode_init(char *tracefile);
+void training_mode_init();
 void show_wakeups(double d, double interval, double C0time);
 
 /* min definition borrowed from the Linux kernel */

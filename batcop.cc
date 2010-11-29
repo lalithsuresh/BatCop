@@ -893,6 +893,7 @@ int run_batcop(int argc, char **argv)
       fprintf (stdout, "\nRunning in TRAIN_ONLY mode\n");
       if (tracefile != NULL)
         fprintf (stdout, "Input file will not be used\n");
+      training_mode_init ();
     }
   else if (runmode == MONITOR_ONLY)
     {
