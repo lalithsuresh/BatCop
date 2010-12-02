@@ -9,6 +9,8 @@ fi
 
 # Number of seconds snort should run for
 seconds=6
+# Scripts to be executed on attack detection
+recovery_scripts_file="recovery.conf"
 
 # Removing previous snort files
 sudo rm -f log/alert
@@ -30,20 +32,10 @@ if [ `cat log/alert | wc -l` -eq 0  ];
 then
 echo "** Boring network, no attacks detected."
 else
-cat log/alert | grep "Abnormal_TCP_Upload" | awk '{print $4,substr($9,1,match($9, ":")-1),substr($11, 1, match($11, ":")-1)}' | sort | uniq > log/attacks_detected.txt
-fi
-
+#cat log/alert | awk '{print $4","substr($9,1,match($9, ":")-1)","substr($11, 1, match($11, ":")-1)}' | sort | uniq > log/attacks_detected.txt
+cat log/alert | awk '{print $4","$9","$11}' | sort | uniq > log/attacks_detected.txt
+cat log/attacks_detected.txt 
 # Taking actions on the attacks if configured in recovery.conf 
-
-#src_IP_list=`cat log/attacks_detected.txt |  awk '{print $2}'`
-#for IPaddr in $src_IP_list
-#do
-#if [ $IPaddr != `./getIP.sh` ]; then #this comparison is to prevent adding ourselves to IP
-#echo $IPaddr
-##block_icmp.sh $IPaddr
-#fi
-#done
-
 attacks=`cat log/attacks_detected.txt`
 for attack in $attacks
 do
@@ -53,15 +45,18 @@ attack_src=`echo $attack | awk -F',' '{print $2}'`
 attack_dst=`echo $attack | awk -F',' '{print $3}'`
 if [ "$attack_src" != `./getIP.sh` ];
 then
-echo $attack_src" is flooding: "$attack_type" (TODO: Preventive measures to be taken here)"
-#TODO:fetch the list of scripts for $attack_type from recovery.conf and execute them like below:
-#block_icmp.sh $attack_src
-#block_tcp.sh $attack_src 
-#
+echo $attack_type" detected from "$attack_src
+
+	list_of_scripts=`cat $recovery_scripts_file | grep $attack_type | awk '{print $2}'`
+        for script in $list_of_scripts
+               do
+               ./$script $attack_src
+               done
+
 fi
 done
 
-
+fi
 
 # Cleaning up and Exiting
 rm -f subnet.txt
