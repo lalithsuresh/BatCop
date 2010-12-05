@@ -152,10 +152,10 @@ void leave (int sig)
       alglib::ae_int_t info;
       alglib::real_2d_array C;
       alglib::integer_1d_array xyc;
-      alglib::kmeansgenerate (i->second, 10, 2, 2, 10, info, C, xyc);
+      alglib::kmeansgenerate (i->second, 10, 2, 3, 10, info, C, xyc);
 
       if (info == 1)
-        fprintf (stderr, "%s : %d: [%f %f],[%f %f]\n", i->first, info, C[0][0], C[0][1], C[1][0], C[1][1]);
+        fprintf (stderr, "%s : %d: [%f %f %f],[%f %f %f]\n", i->first, info, C[0][0], C[0][1], C[0][2], C[1][0], C[1][1], C[1][2]);
     }
     
 /*
@@ -267,7 +267,7 @@ void compute_timerstats(int nostats, int ticktime)
                   temp.flag = 1;
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
-                  analysismap[lines[i].string].setlength (100, 2);
+                  analysismap[lines[i].string].setlength (10, 2);
                 }
               else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
                 {
@@ -280,9 +280,9 @@ void compute_timerstats(int nostats, int ticktime)
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
                   fprintf (stderr, "Second: %s: countmap: %d\n", lines[i].string, countmap[lines[i].string]);
-                  analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
-                  analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
-                  analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
+                  analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
+                  analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
+//                  analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
                 }
               else
                 {
@@ -292,13 +292,13 @@ void compute_timerstats(int nostats, int ticktime)
                   temp.flag = 0;
                   
                   datamap[lines[i].string].push_back (temp);
-                  if (countmap[lines[i].string] < 10)
+                  if (countmap[lines[i].string] < 9)
                     {
                       countmap[lines[i].string]++;
                       fprintf (stderr, "Third: %s: countmap: %d \n", lines[i].string, countmap[lines[i].string]);
-                      analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
-                      analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
-                      analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
+                      analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
+                      analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
+//                      analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
                     }
                 }
 
