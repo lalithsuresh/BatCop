@@ -981,6 +981,40 @@ int run_batcop(int argc, char **argv)
 		memset(&cstate_lines, 0, sizeof(cstate_lines));
 		topcstate = -4;
 
+    if (totalevents == 0 && maxcstate <= 1) {
+      sprintf(cstate_lines[5],_("< Detailed C-state information is not available.>\n"));
+    } else {
+      double sleept, percentage;
+      c0 = sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ - totalticks;
+      if (c0 < 0)
+        c0 = 0; /* rounding errors in measurement might make c0 go slightly negative.. this is confusing */
+      sprintf(cstate_lines[0], _("Cn\t          Avg residency\n"));
+
+      percentage = c0 * 100.0 / (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
+      sprintf(cstate_lines[1], _("C0 (cpu running)        (%4.1f%%)\n"), percentage);
+      if (percentage > 50)
+        topcstate = 0;
+      for (i = 0; i < 8; i++)
+        if (cur_usage[i]) {
+          sleept = (cur_duration[i] - last_duration[i]) / (cur_usage[i] - last_usage[i]
+                      + 0.1) / FREQ;
+          percentage = (cur_duration[i] -
+                last_duration[i]) * 100 /
+               (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
+
+          if (cnames[i][0]==0)
+            sprintf(cnames[i],"C%i",i+1);
+          sprintf
+              (cstate_lines[2+i], _("%s\t%5.1fms (%4.1f%%)\n"),
+               cnames[i], sleept, percentage);
+          if (maxsleep < sleept)
+            maxsleep = sleept;
+          if (percentage > 50)
+            topcstate = i+1;
+
+        }
+    }
+
 		/* now the timer_stats info */
 		memset(line, 0, sizeof(line));
 		totalticks = 0;
@@ -1039,7 +1073,7 @@ int run_batcop(int argc, char **argv)
 				continue;
 			if (strncmp(func, "tick_setup_sched_timer", 20) == 0)
 				continue;
-			if (strcmp(process, "powertop") == 0)
+			if (strcmp(process, "batcop") == 0)
 				continue;
 			if (c)
 				*c = 0;

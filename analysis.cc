@@ -30,6 +30,9 @@
 #include <wchar.h>
 #include <sys/time.h>
 
+#include <map>
+#include <iostream>
+
 #include "batcop.h"
 #include "ap.h"
 #include "alglibinternal.h"
@@ -41,13 +44,24 @@ static WINDOW *battery_power_window;
 
 char status_bar_slots[10][40];
 
-static int mapcount = 0;
-static char* string_list[1000];
-static double value_list[1000] = {0};
+struct data_tuple_ {
+  int cpu;
+  int disk;
+  int irq;
+  bool flag;
+};
 
-int maxtimerstats = 50;
+typedef struct data_tuple_ data_tuple;
+
+static int mapcount = 0;
+
+std::map <char *, std::vector<data_tuple> > datamap;
+std::map <char *, int > countmap;
+std::map <char *, alglib::real_2d_array > analysismap;
 
 alglib::real_2d_array r2a;
+
+int maxtimerstats = 50;
 
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 {
@@ -120,6 +134,31 @@ extern "C"{
 
 void leave (int sig)
 {
+  for (std::map<char *, std::vector<data_tuple> >::const_iterator i = datamap.begin ();
+        i != datamap.end (); i++)
+    {
+      //std::cerr << i->first << " irq:" << i->second.irq << " cpu:" << i->second.cpu << " disk:" << i->second.disk << "\n";
+      std::cerr << "\n" << i->first << "\n";
+      for (std::vector<data_tuple>::const_iterator vect = i->second.begin ();
+            vect != i->second.end(); vect++)
+        {
+          std::cerr << "[" << vect->cpu << "," << vect->disk << "," << vect->irq << "]\n";
+        }
+    }
+
+  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+        i != analysismap.end (); i++)
+    {
+      alglib::ae_int_t info;
+      alglib::real_2d_array C;
+      alglib::integer_1d_array xyc;
+      alglib::kmeansgenerate (i->second, 10, 2, 2, 10, info, C, xyc);
+
+      if (info == 1)
+        fprintf (stderr, "%s : %d: [%f %f],[%f %f]\n", i->first, info, C[0][0], C[0][1], C[1][0], C[1][1]);
+    }
+    
+/*
   FILE *fp;
   int i;
   char str1[1023];
@@ -127,7 +166,7 @@ void leave (int sig)
 
   alglib::ae_int_t x;
   alglib::real_1d_array w;
-  alglib::fisherlda (r2a, 100, 2, 2, x, w);
+  alglib::fisherlda (r2a, 100, 2, 2, 10, x, w);
 
   printf ("\nFisher Algorithm has returned status: %d\n",x);
   for (int i = 0; i < 2; i++)
@@ -145,12 +184,12 @@ void leave (int sig)
       fprintf (stderr, "\nPreparing trace file %s\n", str1);
       for (i = 0; i < mapcount; i++)
         {
-          fprintf (fp, "%5.1f %s\n", value_list[i], string_list[i]);
+          fprintf (fp, "%d %s\n", value_list[i], string_list[i]);
         }
 
       fclose (fp);
     }
-
+*/
   exit (sig);
 }
 
@@ -168,6 +207,7 @@ void training_mode_init ()
 /* FIXME: Floating point bug */
 void monitor_mode_init (char *tracefile)
 {
+/*
   FILE *fp;
   int c;
   float x;
@@ -198,6 +238,7 @@ void monitor_mode_init (char *tracefile)
       value_list[mapcount] = x;
       mapcount++;
     } 
+    */
 }
 
 void compute_timerstats(int nostats, int ticktime)
@@ -211,50 +252,57 @@ void compute_timerstats(int nostats, int ticktime)
 		for (i = 0; i < linehead; i++)
 			if ((lines[i].count > 0 || lines[i].disk_count > 0) && counter++ < maxtimerstats)
         {
-          flag = 0;
-          int k;
-          for (k = 0; k < mapcount; k++)
+          //printf(" %5.1f%% (%5.1f)  %s\n", lines[i].count * 100.0 / linectotal,
+          //  lines[i].count * 1.0 / ticktime,
+          //  lines[i].string);
+
+          if (runmode == TRAIN_ONLY)
             {
-              if (strncmp (string_list[k], lines[i].string, sizeof (char) * strlen (lines[i].string)) == 0)
+              data_tuple temp;
+              if (datamap.find (lines[i].string) == datamap.end ())
                 {
-                  flag = 1;
-                  if (((double) lines[i].count - value_list[k]) * 1.0/ticktime > 100.0 && runmode != TRAIN_ONLY)
-                    {
-                      struct timeval tp;
-                      gettimeofday (&tp, NULL);
-                      printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, lines[i].count * 1.0/ticktime, string_list[k]);
-                      printf ("\n");
-                    }
-                  if (runmode != MONITOR_ONLY)
-                    {
-                      value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
-                      if (strncmp (lines[i].string, "[iwlagn] <interrupt>", sizeof (char) * strlen (lines[i].string)) == 0)
-                        {
-                          if (numsamples != 100)
-                            {
-                              r2a[numsamples][0] = lines[i].count * 1.0/ticktime;
-                              r2a[numsamples][1] = lines[i].disk_count;
-                              r2a[numsamples][2] = 0;
-                              numsamples++;
-                            }
-                          else
-                            {
-                              printf ("\nPrinting collected samples\n");
-                              for (int t =0 ; t < 100; t++)
-                                printf ("%f ", r2a[t][0]);
-                            }
-                        }
-                    }
-                  break;
+                  temp.cpu = 0 * 1.0/ticktime;
+                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.disk = lines[i].disk_count * 1.0/ticktime;
+                  temp.flag = 1;
+                  datamap[lines[i].string].push_back (temp);
+                  countmap[lines[i].string] = 0;
+                  analysismap[lines[i].string].setlength (100, 2);
                 }
-            }
-          if (flag == 0 && runmode != MONITOR_ONLY)
-            {
-              string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string) + 1));
-              strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string) + 1));
-              value_list[mapcount] = lines[i].count;// * 1.0/ticktime;
-              mapcount++;
-            } 
+              else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
+                {
+                  datamap[lines[i].string].clear ();
+                  temp.cpu = 0;
+                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.disk = lines[i].disk_count * 1.0/ticktime;
+                  temp.flag = 0;
+
+                  datamap[lines[i].string].push_back (temp);
+                  countmap[lines[i].string] = 0;
+                  fprintf (stderr, "Second: %s: countmap: %d\n", lines[i].string, countmap[lines[i].string]);
+//                  analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.cpu;
+                  analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
+                  analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
+                }
+              else
+                {
+                  temp.cpu = 0;
+                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.disk = lines[i].disk_count * 1.0/ticktime;
+                  temp.flag = 0;
+                  
+                  datamap[lines[i].string].push_back (temp);
+                  if (countmap[lines[i].string] < 10)
+                    {
+                      countmap[lines[i].string]++;
+                      fprintf (stderr, "Third: %s: countmap: %d \n", lines[i].string, countmap[lines[i].string]);
+//                      analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.cpu;
+                      analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
+                      analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
+                    }
+                }
+
+           }
 				}
 	} else {
 		if (geteuid() == 0) {
