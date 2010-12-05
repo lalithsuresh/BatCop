@@ -280,9 +280,9 @@ void compute_timerstats(int nostats, int ticktime)
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
                   fprintf (stderr, "Second: %s: countmap: %d\n", lines[i].string, countmap[lines[i].string]);
-//                  analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.cpu;
                   analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
                   analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
+                  analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
                 }
               else
                 {
@@ -296,9 +296,9 @@ void compute_timerstats(int nostats, int ticktime)
                     {
                       countmap[lines[i].string]++;
                       fprintf (stderr, "Third: %s: countmap: %d \n", lines[i].string, countmap[lines[i].string]);
-//                      analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.cpu;
                       analysismap[lines[i].string][0][countmap[lines[i].string]] = temp.irq;
                       analysismap[lines[i].string][1][countmap[lines[i].string]] = temp.disk;
+                      analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
                     }
                 }
 
