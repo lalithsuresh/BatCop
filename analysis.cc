@@ -29,6 +29,7 @@
 #include <time.h>
 #include <wchar.h>
 #include <sys/time.h>
+#include <assert.h>
 
 #include <map>
 #include <iostream>
@@ -193,88 +194,41 @@ extern "C"{
 
 void process_and_exit ()
 {
-  
-  /*
-  for (std::map<char *, std::vector<data_tuple> >::const_iterator i = datamap.begin ();
-        i != datamap.end (); i++)
+  assert (runmode == TRAIN_ONLY);
+  std::stringstream filename;
+  filename << "traces_" << getpid ();
+
+  std::fstream file_op(filename.str().c_str(),std::ios::out);
+
+  if (!file_op.is_open())
     {
-      //std::cerr << i->first << " irq:" << i->second.irq << " cpu:" << i->second.cpu << " disk:" << i->second.disk << "\n";
-      std::cerr << "\n" << i->first << "\n";
-      for (std::vector<data_tuple>::const_iterator vect = i->second.begin ();
-            vect != i->second.end(); vect++)
+      fprintf (stderr, "Cannot open trace file\n");
+    }
+  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+      i != analysismap.end (); i++)
+    {
+      alglib::ae_int_t info;
+      alglib::real_2d_array C;
+      alglib::integer_1d_array xyc;
+
+      // Run k-means analysis on data with NPoints=training_cycles, NVars=3, NumClusters=2, NumRestarts=10
+      alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 10, info, C, xyc);
+
+      if (info == 1)
         {
-          std::cerr << "[" << vect->cpu << "," << vect->disk << "," << vect->irq << "]\n";
+          file_op << i->first << " "    // Name of process
+            << C[0][0] << " "     // irq1
+            << C[0][1] << " "     // irq2
+            << C[1][0] << " "     // disk1
+            << C[1][2] << " "     // disk2
+            << C[2][0] << " "     // cpu1
+            << C[2][1] << "\n";   // cpu2
         }
     }
-  */
 
-  if (runmode == TRAIN_ONLY) // Just to avoid future trouble
-    {
-      std::stringstream filename;
-      filename << "traces_" << getpid ();
+  fprintf (stderr, "Writing K-Means results to file: %s\n", filename.str().c_str());
+  file_op.close ();
 
-      std::fstream file_op(filename.str().c_str(),std::ios::out);
-
-      if (!file_op.is_open())
-        {
-          fprintf (stderr, "Cannot open trace file\n");
-        }
-      for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
-            i != analysismap.end (); i++)
-        {
-          alglib::ae_int_t info;
-          alglib::real_2d_array C;
-          alglib::integer_1d_array xyc;
-          alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 10, info, C, xyc);
-
-          if (info == 1)
-            {
-              file_op << i->first << " "
-                      << C[0][0] << " "
-                      << C[0][1] << " "
-                      << C[1][0] << " "
-                      << C[1][2] << " "
-                      << C[2][0] << " "
-                      << C[2][1] << "\n";
-            }
-        }
-
-      fprintf (stderr, "Writing K-Means results to file: %s\n", filename.str().c_str());
-      file_op.close ();
-    }
-    
-/*
-  FILE *fp;
-  int i;
-  char str1[1023];
-  char hostname[1023];
-
-  alglib::ae_int_t x;
-  alglib::real_1d_array w;
-  alglib::fisherlda (r2a, 100, 2, 2, 10, x, w);
-
-  printf ("\nFisher Algorithm has returned status: %d\n",x);
-  for (int i = 0; i < 2; i++)
-    {
-      printf ("%f ", w[i]);
-    }
-  printf ("\n");
-
-  if (runmode != MONITOR_ONLY)
-    {
-      gethostname (hostname, 1023);
-      sprintf (str1, "traces_%s_%d", hostname, getpid ());
-
-      fp = fopen (str1, "w");
-      fprintf (stderr, "\nPreparing trace file %s\n", str1);
-      for (i = 0; i < mapcount; i++)
-        {
-          fprintf (fp, "%d %s\n", value_list[i], string_list[i]);
-        }
-
-      fclose (fp);
-    }
-*/
   exit (0);
 }
 
