@@ -57,7 +57,7 @@ double ticktime = 15.0;
 
 int interrupt_0, total_interrupt;
 
-int showpids = 0;
+int showpids = 1;
 
 static int maxcstate = 0;
 int topcstate = 0;
@@ -122,8 +122,8 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid)
 		if (strcmp(string, lines[i].string) == 0) {
 			lines[i].count += cpu_count;
 			lines[i].disk_count += disk_count;
-			if (pid && strcmp(lines[i].pid, pid)!=0)
-				lines[i].pid[0] = 0;
+//			if (pid && strcmp(lines[i].pid, pid)!=0)
+//				lines[i].pid[0] = 0;
 			return;
 		}
 	if (linehead == linesize)

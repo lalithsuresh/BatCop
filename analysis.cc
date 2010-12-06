@@ -45,7 +45,7 @@ static WINDOW *battery_power_window;
 char status_bar_slots[10][40];
 
 struct data_tuple_ {
-  int cpu;
+  long long int cpu;
   int disk;
   int irq;
   bool flag;
@@ -58,10 +58,66 @@ static int mapcount = 0;
 std::map <char *, std::vector<data_tuple> > datamap;
 std::map <char *, int > countmap;
 std::map <char *, alglib::real_2d_array > analysismap;
+std::map <char *, long long int > last_cpu;
 
 alglib::real_2d_array r2a;
 
 int maxtimerstats = 50;
+
+long long int getTicksFromPid (char *inPid)
+{
+  long long int pid;
+  char tcomm[PATH_MAX];
+  char state;
+
+  long long int ppid;
+  long long int pgid;
+  long long int sid;
+  long long int tty_nr;
+  long long int tty_pgrp;
+
+  long long int flags;
+  long long int min_flt;
+  long long int cmin_flt;
+  long long int maj_flt;
+  long long int cmaj_flt;
+  long long int utime;
+  long long int stimev;
+
+  long tickspersec;
+
+  FILE *input;
+
+  tickspersec = sysconf(_SC_CLK_TCK);
+  input = NULL;
+
+  chdir("/proc");
+  if(chdir(inPid) == 0) { input = fopen("stat", "r"); }
+  if(!input) {
+    perror("open");
+    return -1;
+  }
+
+  fscanf(input, "%lld ", &pid);
+  fscanf(input, "%s ", tcomm);
+  fscanf(input, "%c ", &state);
+  fscanf(input, "%lld ", &ppid);
+  fscanf(input, "%lld ", &pgid);
+  fscanf(input, "%lld ", &sid);
+  fscanf(input, "%lld ", &tty_nr);
+  fscanf(input, "%lld ", &tty_pgrp);
+  fscanf(input, "%lld ", &flags);
+  fscanf(input, "%lld ", &min_flt);
+  fscanf(input, "%lld ", &cmin_flt);
+  fscanf(input, "%lld ", &maj_flt);
+  fscanf(input, "%lld ", &cmaj_flt);
+  fscanf(input, "%lld ", &utime);
+  fscanf(input, "%lld ", &stimev);
+  
+  fclose (input);
+
+  return utime + stimev;
+}
 
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 {
@@ -152,10 +208,10 @@ void leave (int sig)
       alglib::ae_int_t info;
       alglib::real_2d_array C;
       alglib::integer_1d_array xyc;
-      alglib::kmeansgenerate (i->second, 10, 2, 3, 10, info, C, xyc);
+      alglib::kmeansgenerate (i->second, 10, 3, 2, 10, info, C, xyc);
 
       if (info == 1)
-        fprintf (stderr, "%s : %d: [%f %f %f],[%f %f %f]\n", i->first, info, C[0][0], C[0][1], C[0][2], C[1][0], C[1][1], C[1][2]);
+        fprintf (stderr, "%s : %d: [%f %f],[%f %f], [%f %f]\n", i->first, info, C[0][0], C[0][1], C[0][2], C[1][0], C[1][1], C[1][2], C[2][0], C[2][1]);
     }
     
 /*
@@ -261,13 +317,18 @@ void compute_timerstats(int nostats, int ticktime)
               data_tuple temp;
               if (datamap.find (lines[i].string) == datamap.end ())
                 {
-                  temp.cpu = 0 * 1.0/ticktime;
+                  temp.cpu = 0;
                   temp.irq = lines[i].count * 1.0/ticktime;
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 1;
+
+                  if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                    {
+                      last_cpu[lines[i].pid] = getTicksFromPid (lines[i].pid);
+                    }
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
-                  analysismap[lines[i].string].setlength (10, 2);
+                  analysismap[lines[i].string].setlength (10, 3);
                 }
               else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
                 {
@@ -277,12 +338,19 @@ void compute_timerstats(int nostats, int ticktime)
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 0;
 
+                  if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                    {
+                      long long int newcount = getTicksFromPid (lines[i].pid);
+                      //fprintf (stderr, "%s:  %lld %lld\n", lines[i].string, newcount, last_cpu[lines[i].pid]);
+                      temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                      last_cpu[lines[i].pid] = newcount;
+                    }
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
-                  fprintf (stderr, "Second: %s: countmap: %d\n", lines[i].string, countmap[lines[i].string]);
+                  //fprintf (stderr, "Second: %s: countmap: %d cpu: %lld\n", lines[i].string, countmap[lines[i].string], temp.cpu);
                   analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
                   analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
-//                  analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
+                  analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
                 }
               else
                 {
@@ -291,14 +359,21 @@ void compute_timerstats(int nostats, int ticktime)
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 0;
                   
+                  if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                    {
+                      long long int newcount = getTicksFromPid (lines[i].pid);
+                      //fprintf (stderr, "%s:  %lld %lld\n", lines[i].string, newcount, last_cpu[lines[i].pid]);
+                      temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                      last_cpu[lines[i].pid] = newcount;
+                    }
                   datamap[lines[i].string].push_back (temp);
                   if (countmap[lines[i].string] < 9)
                     {
                       countmap[lines[i].string]++;
-                      fprintf (stderr, "Third: %s: countmap: %d \n", lines[i].string, countmap[lines[i].string]);
+                      //fprintf (stderr, "Third: %s: countmap: %d cpu: %lld\n", lines[i].string, countmap[lines[i].string], temp.cpu);
                       analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
                       analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
-//                      analysismap[lines[i].string][2][countmap[lines[i].string]] = temp.cpu;
+                      analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
                     }
                 }
 
