@@ -32,6 +32,8 @@
 
 #include <map>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "batcop.h"
 #include "ap.h"
@@ -90,9 +92,10 @@ long long int getTicksFromPid (char *inPid)
 
   tickspersec = sysconf(_SC_CLK_TCK);
   input = NULL;
+  std::stringstream filename;
+  filename << "/proc/" << inPid << "/stat";
 
-  chdir("/proc");
-  if(chdir(inPid) == 0) { input = fopen("stat", "r"); }
+  input = fopen (filename.str().c_str(), "r");
   if(!input) {
     perror("open");
     return -1;
@@ -188,8 +191,10 @@ void show_wakeups(double d, double interval, double C0time)
 extern "C"{
 #endif
 
-void leave (int sig)
+void process_and_exit ()
 {
+  
+  /*
   for (std::map<char *, std::vector<data_tuple> >::const_iterator i = datamap.begin ();
         i != datamap.end (); i++)
     {
@@ -201,17 +206,41 @@ void leave (int sig)
           std::cerr << "[" << vect->cpu << "," << vect->disk << "," << vect->irq << "]\n";
         }
     }
+  */
 
-  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
-        i != analysismap.end (); i++)
+  if (runmode == TRAIN_ONLY) // Just to avoid future trouble
     {
-      alglib::ae_int_t info;
-      alglib::real_2d_array C;
-      alglib::integer_1d_array xyc;
-      alglib::kmeansgenerate (i->second, 10, 3, 2, 10, info, C, xyc);
+      std::stringstream filename;
+      filename << "traces_" << getpid ();
 
-      if (info == 1)
-        fprintf (stderr, "%s : %d: [%f %f],[%f %f], [%f %f]\n", i->first, info, C[0][0], C[0][1], C[0][2], C[1][0], C[1][1], C[1][2], C[2][0], C[2][1]);
+      std::fstream file_op(filename.str().c_str(),std::ios::out);
+
+      if (!file_op.is_open())
+        {
+          fprintf (stderr, "Cannot open trace file\n");
+        }
+      for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+            i != analysismap.end (); i++)
+        {
+          alglib::ae_int_t info;
+          alglib::real_2d_array C;
+          alglib::integer_1d_array xyc;
+          alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 10, info, C, xyc);
+
+          if (info == 1)
+            {
+              file_op << i->first << " "
+                      << C[0][0] << " "
+                      << C[0][1] << " "
+                      << C[1][0] << " "
+                      << C[1][2] << " "
+                      << C[2][0] << " "
+                      << C[2][1] << "\n";
+            }
+        }
+
+      fprintf (stderr, "Writing K-Means results to file: %s\n", filename.str().c_str());
+      file_op.close ();
     }
     
 /*
@@ -246,18 +275,12 @@ void leave (int sig)
       fclose (fp);
     }
 */
-  exit (sig);
+  exit (0);
 }
 
 #ifdef __cplusplus
 } //extern "C"
 #endif
-
-void training_mode_init ()
-{
-  r2a.setlength (100,3);
-}
-
 
 /* FIXME: Need to make this more clean */
 /* FIXME: Floating point bug */
@@ -302,6 +325,7 @@ void compute_timerstats(int nostats, int ticktime)
 	int i;
   int flag = 0;
   static int numsamples = 0;
+  static bool complete = false;
 
 	if (!nostats) {
 		int counter = 0;
@@ -328,7 +352,7 @@ void compute_timerstats(int nostats, int ticktime)
                     }
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
-                  analysismap[lines[i].string].setlength (10, 3);
+                  analysismap[lines[i].string].setlength (training_cycles, 3);
                 }
               else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
                 {
@@ -367,16 +391,25 @@ void compute_timerstats(int nostats, int ticktime)
                       last_cpu[lines[i].pid] = newcount;
                     }
                   datamap[lines[i].string].push_back (temp);
-                  if (countmap[lines[i].string] < 9)
+                  if (countmap[lines[i].string] < training_cycles - 1)
                     {
+                      complete = false; 
                       countmap[lines[i].string]++;
                       //fprintf (stderr, "Third: %s: countmap: %d cpu: %lld\n", lines[i].string, countmap[lines[i].string], temp.cpu);
                       analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
                       analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
                       analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
                     }
+                  else
+                    {
+                      complete = true;
+                    }
                 }
 
+                if (complete == true)
+                  {
+                    process_and_exit ();
+                  }
            }
 				}
 	} else {

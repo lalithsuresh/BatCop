@@ -52,6 +52,7 @@ extern int             linehead;
 extern int             linesize;
 extern int             linectotal;
 extern int             runmode;
+extern int             training_cycles;
 
 extern double displaytime;
 

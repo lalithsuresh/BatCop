@@ -58,6 +58,7 @@ double ticktime = 15.0;
 int interrupt_0, total_interrupt;
 
 int showpids = 1;
+int training_cycles = 10;
 
 static int maxcstate = 0;
 int topcstate = 0;
@@ -836,9 +837,6 @@ void version()
 	exit(0);
 }
 
-void leave(int sig);
-
-
 int run_batcop(int argc, char **argv)
 {
 	char line[1024];
@@ -857,6 +855,7 @@ int run_batcop(int argc, char **argv)
  			{ "version", 0, NULL, 'v' },
  			{ "mode", 1, NULL, 'm' },
  			{ "file", 1, NULL, 'f' },
+ 			{ "cycles", 1, NULL, 'c' },
  			{ 0, 0, NULL, 0 }
  		};
  		int index2 = 0, c;
@@ -883,6 +882,9 @@ int run_batcop(int argc, char **argv)
     case 'f':
       tracefile = optarg;
       break;
+    case 'c':
+      training_cycles = strtod (optarg, NULL);
+      break;
  		default:
  			;
  		}
@@ -893,7 +895,6 @@ int run_batcop(int argc, char **argv)
       fprintf (stdout, "\nRunning in TRAIN_ONLY mode\n");
       if (tracefile != NULL)
         fprintf (stdout, "Input file will not be used\n");
-      training_mode_init ();
     }
   else if (runmode == MONITOR_ONLY)
     {
@@ -919,8 +920,6 @@ int run_batcop(int argc, char **argv)
       fprintf (stderr, "\nError: Mode not recognised\n");
       exit (-1);
     }
-
-  (void) signal (SIGINT, leave);
 
 	system("/sbin/modprobe cpufreq_stats > /dev/null 2>&1");
 	read_data(&start_usage[0], &start_duration[0]);
