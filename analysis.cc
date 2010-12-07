@@ -62,6 +62,7 @@ std::map <char *, std::vector<data_tuple> > datamap;
 std::map <char *, int > countmap;
 std::map <char *, alglib::real_2d_array > analysismap;
 std::map <char *, long long int > last_cpu;
+std::map <std::string, std::vector<double> > centroid_map;
 
 alglib::real_2d_array r2a;
 
@@ -216,13 +217,14 @@ void process_and_exit ()
 
       if (info == 1)
         {
-          file_op << i->first << " "    // Name of process
-            << C[0][0] << " "     // irq1
-            << C[0][1] << " "     // irq2
-            << C[1][0] << " "     // disk1
-            << C[1][2] << " "     // disk2
-            << C[2][0] << " "     // cpu1
-            << C[2][1] << "\n";   // cpu2
+          // Need to test min-max consistency
+          file_op << min(C[0][0], C[0][1]) << " "     // irq1
+                  << max(C[0][0], C[0][1]) << " "     // irq2
+                  << min(C[1][0], C[1][1]) << " "     // disk1
+                  << max(C[1][0], C[1][1]) << " "     // disk2
+                  << min(C[2][0], C[2][1]) << " "     // cpu1
+                  << max(C[2][0], C[2][1]) << " "     // cpu2
+                  << i->first << "\n";                // We add the name last to make it easier to read
         }
     }
 
@@ -240,7 +242,7 @@ void process_and_exit ()
 /* FIXME: Floating point bug */
 void monitor_mode_init (char *tracefile)
 {
-/*
+
   FILE *fp;
   int c;
   float x;
@@ -249,7 +251,15 @@ void monitor_mode_init (char *tracefile)
 
   while (!feof (fp))
     {
-      fscanf (fp, "%f", &x);
+      // Push centroid coordinates onto a vector.
+      // cetrnoid_vect -> {C[0][0], C[0][1], C[1][0], C[1][1], C[2][0], C[2][1]}
+      std::vector<double> centroid_vect;
+      for (uint32_t i =0; i < 6; i++)
+        {
+          fscanf (fp, "%f", &x);
+          centroid_vect.push_back (x);
+        }
+
       char *tmp = NULL;
       tmp = (char *) malloc (sizeof (char) * 1023);
 
@@ -267,11 +277,13 @@ void monitor_mode_init (char *tracefile)
         {
           sprintf (tmp, "%s%c",tmp,c);
         }
-      string_list[mapcount] = tmp;
-      value_list[mapcount] = x;
-      mapcount++;
+
+      std::stringstream temp;
+      temp << tmp;
+      // By now we have the whole process name.
+      // So add to centroid map
+      centroid_map[temp.str()] = centroid_vect;
     } 
-    */
 }
 
 void compute_timerstats(int nostats, int ticktime)
@@ -293,6 +305,8 @@ void compute_timerstats(int nostats, int ticktime)
           if (runmode == TRAIN_ONLY)
             {
               data_tuple temp;
+
+              // Let the data collectors warmup
               if (datamap.find (lines[i].string) == datamap.end ())
                 {
                   temp.cpu = 0;
@@ -308,6 +322,8 @@ void compute_timerstats(int nostats, int ticktime)
                   countmap[lines[i].string] = 0;
                   analysismap[lines[i].string].setlength (training_cycles, 3);
                 }
+
+              // First entries actually goes in at this point
               else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
                 {
                   datamap[lines[i].string].clear ();
@@ -330,6 +346,8 @@ void compute_timerstats(int nostats, int ticktime)
                   analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
                   analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
                 }
+
+              // Second entry on goes in from here
               else
                 {
                   temp.cpu = 0;
@@ -364,7 +382,50 @@ void compute_timerstats(int nostats, int ticktime)
                   {
                     process_and_exit ();
                   }
-           }
+             }
+          else if (runmode == MONITOR_ONLY)
+            {
+              std::stringstream pcharToString;
+              pcharToString << lines[i].string;
+
+              // We need a warmup mechanism
+              if (centroid_map.find (pcharToString.str()) != centroid_map.end ())
+                {
+                  double distance1, distance2; // distance from both centroids
+                  double min;
+                  std::vector<double> centroid_vect;
+                  data_tuple temp;
+                  centroid_vect = centroid_map[lines[i].string];
+
+                  temp.cpu = 0;
+                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.disk = lines[i].disk_count * 1.0/ticktime;
+                  temp.flag = 0;
+
+                  if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                    {
+                      long long int newcount = getTicksFromPid (lines[i].pid);
+                      //fprintf (stderr, "%s:  %lld %lld\n", lines[i].string, newcount, last_cpu[lines[i].pid]);
+                      temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                      last_cpu[lines[i].pid] = newcount;
+                    }
+
+                  distance1 = sqrt (  (centroid_vect[0] - temp.irq) * (centroid_vect[0] - temp.irq) 
+                                   +  (centroid_vect[2] - temp.disk) * (centroid_vect[2] - temp.disk)
+                                   +  (centroid_vect[4] - temp.cpu) * (centroid_vect[4] - temp.cpu)  );
+
+                  distance2 = sqrt (  (centroid_vect[1] - temp.irq) * (centroid_vect[1] - temp.irq) 
+                                   +  (centroid_vect[3] - temp.disk) * (centroid_vect[3] - temp.disk)
+                                   +  (centroid_vect[5] - temp.cpu) * (centroid_vect[5] - temp.cpu)  );
+
+                  struct timeval tv;
+                  gettimeofday(&tv,0);
+                  if (distance1 > distance2)
+                    {
+                      fprintf (stderr, "%ld: %s is acting funny! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
+                    }
+                }
+            }
 				}
 	} else {
 		if (geteuid() == 0) {
@@ -375,5 +436,4 @@ void compute_timerstats(int nostats, int ticktime)
 		} else
 			printf("No detailed statistics available; PowerTOP needs root privileges for that\n");
 	}
-
 }
