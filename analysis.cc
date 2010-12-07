@@ -443,7 +443,7 @@ void compute_timerstats(int nostats, int ticktime)
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 0;
 
-                  fprintf (stderr, "Mon: %s: irq: %d\n", lines[i].string, temp.irq);
+                  //fprintf (stderr, "Mon: %s: irq: %d\n", lines[i].string, temp.irq);
                   if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
                     {
                       long long int newcount = getTicksFromPid (lines[i].pid);
@@ -456,7 +456,7 @@ void compute_timerstats(int nostats, int ticktime)
                                    +  (centroid_vect[2] - temp.disk) * (centroid_vect[2] - temp.disk)
                                    +  (centroid_vect[4] - temp.cpu) * (centroid_vect[4] - temp.cpu)  );
 
-                  distance2 = sqrt (  (centroid_vect[1] - (temp.irq - last_val_map[pcharToString.str()])) * (centroid_vect[1] - (temp.irq - last_val_map[pcharToString.str()])) 
+                  distance2 = sqrt (  (centroid_vect[1] - temp.irq) * (centroid_vect[1] - temp.irq) 
                                    +  (centroid_vect[3] - temp.disk) * (centroid_vect[3] - temp.disk)
                                    +  (centroid_vect[5] - temp.cpu) * (centroid_vect[5] - temp.cpu)  );
 
