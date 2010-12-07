@@ -1,7 +1,7 @@
 /*
  * Copyright 2007, Intel Corporation
  *
- * This file is part of PowerTOP
+ * This file is part of PowerTOP, modified for BatCop
  *
  * This program file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -56,7 +56,7 @@ extern int             training_cycles;
 
 extern double displaytime;
 
-void monitor_mode_init(char *tracefile);
+void monitor_mode_init(char *tracefile, char *whitefile);
 void training_mode_init();
 void show_wakeups(double d, double interval, double C0time);
 

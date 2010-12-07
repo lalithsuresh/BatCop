@@ -37,6 +37,7 @@
 #include <sstream>
 
 #include "batcop.h"
+#include "whitelist.h"
 #include "ap.h"
 #include "alglibinternal.h"
 #include "dataanalysis.h"
@@ -234,8 +235,8 @@ void process_and_exit ()
       alglib::real_2d_array C;
       alglib::integer_1d_array xyc;
 
-      // Run k-means analysis on data with NPoints=training_cycles, NVars=3, NumClusters=2, NumRestarts=10
-      alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 10, info, C, xyc);
+      // Run k-means analysis on data with NPoints=training_cycles, NVars=3, NumClusters=2, NumRestarts=100
+      alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 100, info, C, xyc);
 
       if (info == 1)
         {
@@ -246,7 +247,7 @@ void process_and_exit ()
                   << max(C[1][0], C[1][1]) << " "     // disk2
                   << min(C[2][0], C[2][1]) << " "     // cpu1
                   << max(C[2][0], C[2][1]) << " "     // cpu2
-                  << i->first << "\n";                // We add the name last to make it easier to read
+                  << i->first << "\n";                // We add the name last to make it easier to read later
         }
     }
 
@@ -260,9 +261,8 @@ void process_and_exit ()
 } //extern "C"
 #endif
 
-void monitor_mode_init (char *tracefile)
+void monitor_mode_init (char *tracefile, char *whitefile)
 {
-
   FILE *fp;
   int c;
   float x;
@@ -305,6 +305,9 @@ void monitor_mode_init (char *tracefile)
       // So add to centroid map
       centroid_map[temp.str()] = centroid_vect;
     } 
+
+  // See if whitelist is defined
+  read_whitelist (whitefile);
 }
 
 void compute_timerstats(int nostats, int ticktime)
@@ -434,7 +437,7 @@ void compute_timerstats(int nostats, int ticktime)
                       }
                   }
                 // Perform detection from here
-                else if (centroid_map.find (pcharToString.str()) != centroid_map.end ())
+                else if (centroid_map.find (pcharToString.str()) != centroid_map.end () && lookup_whitelist (pcharToString.str().c_str()) == 0)
                   {
                     double distance1, distance2; // distance from both centroids
                     double min;

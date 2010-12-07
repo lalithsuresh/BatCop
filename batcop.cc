@@ -844,6 +844,7 @@ int run_batcop(int argc, char **argv)
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
   char *tracefile = NULL;
+  char *whitefile = NULL;
 
 	start_data_dirty_capture();
 
@@ -856,6 +857,7 @@ int run_batcop(int argc, char **argv)
  			{ "mode", 1, NULL, 'm' },
  			{ "file", 1, NULL, 'f' },
  			{ "cycles", 1, NULL, 'c' },
+ 			{ "whitefile", 1, NULL, 'w' },
  			{ 0, 0, NULL, 0 }
  		};
  		int index2 = 0, c;
@@ -885,6 +887,9 @@ int run_batcop(int argc, char **argv)
     case 'c':
       training_cycles = strtod (optarg, NULL);
       break;
+    case 'w':
+      whitefile = optarg;
+      break;
  		default:
  			;
  		}
@@ -909,7 +914,7 @@ int run_batcop(int argc, char **argv)
           exit (-1);
         }
       fprintf (stdout, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
-      monitor_mode_init (tracefile);
+      monitor_mode_init (tracefile, whitefile);
     }
   else if (runmode == DYNAMIC)
     {
