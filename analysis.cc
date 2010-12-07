@@ -195,6 +195,19 @@ extern "C"{
 
 void process_and_exit ()
 {
+/*
+  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+        i != analysismap.end (); i++)
+    {
+      std::cerr << i->first << "\n";
+      
+      for (uint32_t j = 0; j < training_cycles; j++)
+        {
+          std::cerr << i->second[j][0] << " ";
+        }
+      std::cerr << "\n";
+    }
+    */
   assert (runmode == TRAIN_ONLY);
   std::stringstream filename;
   filename << "traces_" << getpid ();
@@ -328,10 +341,11 @@ void compute_timerstats(int nostats, int ticktime)
                 {
                   datamap[lines[i].string].clear ();
                   temp.cpu = 0;
-                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.irq = lines[i].count * 1.0/ticktime - datamap[lines[i].string][countmap[lines[i].string]].irq;
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 0;
 
+//                  fprintf (stderr, "%s: %d\n", lines[i].string, temp.irq - datamap[lines[i].string][countmap[lines[i].string]].irq); 
                   if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
                     {
                       long long int newcount = getTicksFromPid (lines[i].pid);
@@ -341,7 +355,7 @@ void compute_timerstats(int nostats, int ticktime)
                     }
                   datamap[lines[i].string].push_back (temp);
                   countmap[lines[i].string] = 0;
-                  //fprintf (stderr, "Second: %s: countmap: %d cpu: %lld\n", lines[i].string, countmap[lines[i].string], temp.cpu);
+//                  fprintf (stderr, "Second: %s: countmap: %d cpu: %lld\n", lines[i].string, countmap[lines[i].string], temp.cpu);
                   analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
                   analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
                   analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
@@ -351,10 +365,11 @@ void compute_timerstats(int nostats, int ticktime)
               else
                 {
                   temp.cpu = 0;
-                  temp.irq = lines[i].count * 1.0/ticktime;
+                  temp.irq = lines[i].count * 1.0/ticktime - datamap[lines[i].string][countmap[lines[i].string]].irq;
                   temp.disk = lines[i].disk_count * 1.0/ticktime;
                   temp.flag = 0;
                   
+//                  fprintf (stderr, "%s: %d\n", lines[i].string, temp.irq - datamap[lines[i].string][countmap[lines[i].string]].irq); 
                   if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
                     {
                       long long int newcount = getTicksFromPid (lines[i].pid);
@@ -422,7 +437,7 @@ void compute_timerstats(int nostats, int ticktime)
                   gettimeofday(&tv,0);
                   if (distance1 > distance2)
                     {
-                      fprintf (stderr, "%ld: %s is acting funny! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
+                      fprintf (stderr, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
                     }
                 }
             }
