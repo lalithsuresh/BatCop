@@ -69,6 +69,7 @@ alglib::real_2d_array r2a;
 
 int maxtimerstats = 50;
 
+/* FIXME: Is there a quicker of doing the below? - Lalith */
 long long int getTicksFromPid (char *inPid)
 {
   long long int pid;
@@ -89,16 +90,18 @@ long long int getTicksFromPid (char *inPid)
   long long int utime;
   long long int stimev;
 
-  long tickspersec;
 
   FILE *input;
 
-  tickspersec = sysconf(_SC_CLK_TCK);
   input = NULL;
   std::stringstream filename;
+
+  // Every process has a /proc/pid/stat entry
   filename << "/proc/" << inPid << "/stat";
 
   input = fopen (filename.str().c_str(), "r");
+
+  // Need a more graceful way of handling this case
   if(!input) {
     fprintf (stderr, "File-open: Could not open stat file for %s\n", inPid);
     return 0;
@@ -117,6 +120,10 @@ long long int getTicksFromPid (char *inPid)
   fscanf(input, "%lld ", &cmin_flt);
   fscanf(input, "%lld ", &maj_flt);
   fscanf(input, "%lld ", &cmaj_flt);
+
+  // We're interested only in these two,
+  // but we need to go through the rest
+  // of the file anyway.
   fscanf(input, "%lld ", &utime);
   fscanf(input, "%lld ", &stimev);
   
@@ -196,7 +203,8 @@ extern "C"{
 
 void process_and_exit ()
 {
-
+  /*
+  // Uncomment this section for debugging needs - Lalith
   for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
         i != analysismap.end (); i++)
     {
@@ -208,7 +216,7 @@ void process_and_exit ()
         }
       std::cerr << "\n";
     }
-    
+  */
   assert (runmode == TRAIN_ONLY);
   std::stringstream filename;
   filename << "traces_" << getpid ();
@@ -447,6 +455,8 @@ void compute_timerstats(int nostats, int ticktime)
                         last_cpu[lines[i].pid] = newcount;
                       }
 
+                    // Calculate Euclidian distance to each centroid
+                    // sqrt (dist(Cx,irq)^2 + dist(Cy,disk)^2 + dist(Cz,cpu)^2)
                     distance1 = sqrt (  (centroid_vect[0] - temp.irq) * (centroid_vect[0] - temp.irq) 
                                      +  (centroid_vect[2] - temp.disk) * (centroid_vect[2] - temp.disk)
                                      +  (centroid_vect[4] - temp.cpu) * (centroid_vect[4] - temp.cpu)  );
@@ -458,11 +468,14 @@ void compute_timerstats(int nostats, int ticktime)
                     last_val_map[pcharToString.str()] = lines[i].count;
 
                     struct timeval tv;
-                    gettimeofday(&tv,0);
+                    gettimeofday (&tv, 0);
 
-                    // Ideally, we'd write this to a logfile
+                    // If the new calculated point is further from
+                    // Centroid1 (legitimate) than Centroid2 (malicious),
+                    // then raise a suspicion
                     if (distance1 > distance2)
                       {
+                        // Ideally, we'd write this to a logfile
                         fprintf (stderr, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
                       }
                   }
