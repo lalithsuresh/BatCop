@@ -5,3 +5,4 @@ TODO
 - implement monitor mode
 - implement suspicion callbacks
 - add whitelists/blacklists
+- fix file open error when a process quits mid-training
