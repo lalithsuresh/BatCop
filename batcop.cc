@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <dirent.h>
 #include <libintl.h>
 #include <ctype.h>
@@ -60,6 +61,7 @@ int training_cycles = 10;
 
 static int maxcstate = 0;
 int topcstate = 0;
+FILE *logfile = NULL;
 
 #define IRQCOUNT 150
 
@@ -91,6 +93,15 @@ time_t last_bat_time = 0;
 time_t prev_bat_time = 0;
 
 double displaytime = 0.0;
+
+void leave (int sig)
+{
+  struct timeval tv;
+  gettimeofday (&tv, 0);
+  fprintf (logfile, "%ld Received SIGINT. Exiting.\n", tv.tv_sec);
+  fclose (logfile);
+  exit (sig);
+}
 
 void push_line(char *string, int count)
 {
@@ -844,8 +855,10 @@ int run_batcop(int argc, char **argv)
   char *tracefile = NULL;
   char *whitefile = NULL;
   char *cbfile = NULL;
+  char *lfile = NULL;
 
 	start_data_dirty_capture();
+
 
  	while (1) {
  		static struct option opts[] = {
@@ -858,6 +871,7 @@ int run_batcop(int argc, char **argv)
  			{ "cycles", 1, NULL, 'c' },
  			{ "whitefile", 1, NULL, 'w' },
  			{ "cbfile", 1, NULL, 'b' },
+ 			{ "logfile", 1, NULL, 'l' },
  			{ 0, 0, NULL, 0 }
  		};
  		int index2 = 0, c;
@@ -893,39 +907,62 @@ int run_batcop(int argc, char **argv)
     case 'b':
       cbfile = optarg;
       break;
+    case 'l':
+      lfile = optarg;
+      break;
  		default:
  			;
  		}
  	}
 
+  if (lfile == NULL)
+    {
+      logfile = stderr;
+    }
+  else
+    {
+      const char *x = lfile;
+      logfile = fopen ( x, "a");
+
+      (void) signal(SIGINT,leave);
+
+      if(logfile == NULL)
+        {
+          fprintf (logfile, "Error: Could not open logfile %s\n", lfile);
+          exit (1);
+        }
+      struct timeval tv;
+      gettimeofday (&tv, 0);
+      fprintf (logfile, "%ld Running Batcop.\n", tv.tv_sec);
+    }
   if (runmode == TRAIN_ONLY)
     {
-      fprintf (stdout, "\nRunning in TRAIN_ONLY mode\n");
+      fprintf (logfile, "\nRunning in TRAIN_ONLY mode\n");
       if (tracefile != NULL)
-        fprintf (stdout, "Input file will not be used\n");
+        fprintf (logfile, "Input file will not be used\n");
     }
   else if (runmode == MONITOR_ONLY)
     {
       if (tracefile == NULL)
         {
-          fprintf (stderr, "Error: Trace file required for MONITOR mode. Use --file to specify trace file.\n");
+          fprintf (logfile, "Error: Trace file required for MONITOR mode. Use --file to specify trace file.\n");
           exit (-1);
         }
       else if (access (tracefile, R_OK) != 0)
         {
-          fprintf (stderr, "Error: Cannot access tracefile %s", tracefile);
+          fprintf (logfile, "Error: Cannot access tracefile %s\n", tracefile);
           exit (-1);
         }
-      fprintf (stdout, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
+      fprintf (logfile, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
       monitor_mode_init (tracefile, whitefile, cbfile);
     }
   else if (runmode == DYNAMIC)
     {
-      fprintf (stdout, "\nRunning in DYNAMIC mode\n");
+      fprintf (logfile, "\nRunning in DYNAMIC mode\n");
     }
   else
     {
-      fprintf (stderr, "\nError: Mode not recognised\n");
+      fprintf (logfile, "\nError: Mode not recognised\n");
       exit (-1);
     }
 

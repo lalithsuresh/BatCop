@@ -46,11 +46,11 @@ void read_whitelist (const char *conffile)
   std::ifstream whitefile (conffile);
   if (!whitefile.is_open ())
     {
-      std::cerr << "Error: read_whitelist: Cannot open " << conffile << "\n";
+      fprintf (logfile, "Error: read_whitelist: Cannot open %s\n", conffile);
       exit (1);
     }
 
-  std::cout << "Populating whitelist from file: " << conffile << "\n";
+  fprintf (logfile, "Populating whitelist from file: %s\n", conffile);
   while (whitefile.good ())
     {
       char name[1023];

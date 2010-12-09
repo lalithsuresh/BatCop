@@ -27,6 +27,7 @@
 #include <vector>
 #include "cfm-callback.h"
 #include "stdlib.h"
+#include "batcop.h"
 
 std::map <std::string, std::vector<std::string> > callbacks;
 
@@ -45,7 +46,7 @@ void trigger_callbacks (char *process)
   for (std::vector<std::string>::const_iterator k = vect.begin ();
         k != vect.end (); k++)
     {
-      fprintf (stderr, "Executing callback [%s] for process [%s]\n", k->c_str(), process);
+      fprintf (logfile, "Executing callback [%s] for process [%s]\n", k->c_str(), process);
       int pid = fork ();
 
       if (pid == 0)
@@ -63,7 +64,7 @@ void read_confirmation_callback_conf (const char *conffile)
 
   if (!infile.is_open ())
     {
-      fprintf (stderr, "Error: cannot open %s\n", conffile);
+      fprintf (logfile, "Error: cannot open %s\n", conffile);
     }
 
   while (infile.good ())

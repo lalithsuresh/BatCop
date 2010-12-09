@@ -50,6 +50,7 @@ extern int             linesize;
 extern int             linectotal;
 extern int             runmode;
 extern int             training_cycles;
+extern FILE            *logfile;
 
 extern double displaytime;
 
@@ -69,8 +70,6 @@ void show_wakeups(double d, double interval, double C0time);
         typeof(y) _y = (y);     \
         (void) (&_x == &_y);            \
         _x > _y ? _x : _y; })
-
-
 
 #define _(STRING)    gettext(STRING)
 

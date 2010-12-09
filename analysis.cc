@@ -45,8 +45,6 @@
 
 static WINDOW *battery_power_window;
 
-#define print(win, y, x, fmt, args...) do { mvwprintw(win, y, x, fmt, ## args); } while (0)
-
 char status_bar_slots[10][40];
 
 struct data_tuple_ {
@@ -105,7 +103,7 @@ long long int getTicksFromPid (char *inPid)
 
   // Need a more graceful way of handling this case
   if(!input) {
-    fprintf (stderr, "File-open: Could not open stat file for %s\n", inPid);
+    fprintf (logfile, "File-open: Could not open stat file for %s\n", inPid);
     return 0;
   }
 
@@ -227,7 +225,7 @@ void process_and_exit ()
 
   if (!file_op.is_open())
     {
-      fprintf (stderr, "Cannot open trace file\n");
+      fprintf (logfile, "Cannot open trace file\n");
     }
   for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
       i != analysismap.end (); i++)
@@ -252,7 +250,7 @@ void process_and_exit ()
         }
     }
 
-  fprintf (stderr, "Writing K-Means results to file: %s\n", filename.str().c_str());
+  fprintf (logfile, "Writing K-Means results to file: %s\n", filename.str().c_str());
   file_op.close ();
 
   exit (0);
@@ -314,7 +312,7 @@ void monitor_mode_init (char *tracefile, char *whitefile, char *cbfile)
     }
   else
     {
-      fprintf (stderr, "* No whitelist file defined. All processes will be now under watch.\n");
+      fprintf (logfile, "* No whitelist file defined. All processes will be now under watch.\n");
     }
 
   // Read confirmation callbacks
@@ -326,7 +324,7 @@ void monitor_mode_init (char *tracefile, char *whitefile, char *cbfile)
     }
   else
     {
-      fprintf (stderr, "* No callback list defined.\n");
+      fprintf (logfile, "* No callback list defined.\n");
     }
 }
 
@@ -498,8 +496,7 @@ void compute_timerstats(int nostats, int ticktime)
                     // then raise a suspicion
                     if (distance1 > distance2)
                       {
-                        // Ideally, we'd write this to a logfile
-                        fprintf (stderr, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
+                        fprintf (logfile, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
                         trigger_callbacks (lines[i].string);
                       }
                   }
