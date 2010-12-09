@@ -1,7 +1,8 @@
 TODO
 ----
 
-- refactor out ncurses code completely.
-- remove suggestions related code.
-- add whitelists/blacklists.
-- allow for different algorithms to be used.
+> Lalith
+- implement monitor mode
+- implement suspicion callbacks
+- add whitelists/blacklists
+- fix file open error when a process quits mid-training

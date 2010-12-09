@@ -1,7 +1,7 @@
 /*
  * Copyright 2007, Intel Corporation
  *
- * This file is part of PowerTOP
+ * This file is part of PowerTOP, modified for BatCop
  *
  * This program file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -34,10 +34,7 @@
 
 #define VERSION "1.12"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-
 struct line {
 	char	*string;
 	int	count;
@@ -52,10 +49,11 @@ extern int             linehead;
 extern int             linesize;
 extern int             linectotal;
 extern int             runmode;
+extern int             training_cycles;
 
 extern double displaytime;
 
-void monitor_mode_init(char *tracefile);
+void monitor_mode_init(char *tracefile, char *whitefile);
 void training_mode_init();
 void show_wakeups(double d, double interval, double C0time);
 
@@ -65,6 +63,13 @@ void show_wakeups(double d, double interval, double C0time);
         typeof(y) _y = (y);     \
         (void) (&_x == &_y);            \
         _x < _y ? _x : _y; })
+
+#define max(x,y) ({ \
+        typeof(x) _x = (x);     \
+        typeof(y) _y = (y);     \
+        (void) (&_x == &_y);            \
+        _x > _y ? _x : _y; })
+
 
 
 #define _(STRING)    gettext(STRING)
@@ -100,9 +105,6 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid);
 void start_data_dirty_capture(void);
 void end_data_dirty_capture(void);
 void parse_data_dirty_buffer(void);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+}
 
 #endif

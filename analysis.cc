@@ -29,11 +29,19 @@
 #include <time.h>
 #include <wchar.h>
 #include <sys/time.h>
+#include <assert.h>
+
+#include <map>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "batcop.h"
+#include "whitelist.h"
 #include "ap.h"
 #include "alglibinternal.h"
 #include "dataanalysis.h"
+#include "cfm-callback.h"
 
 static WINDOW *battery_power_window;
 
@@ -41,13 +49,90 @@ static WINDOW *battery_power_window;
 
 char status_bar_slots[10][40];
 
+struct data_tuple_ {
+  long long int cpu;
+  int disk;
+  int irq;
+  bool flag;
+};
+
+typedef struct data_tuple_ data_tuple;
+
 static int mapcount = 0;
-static char* string_list[1000];
-static double value_list[1000] = {0};
+
+std::map <char *, std::vector<data_tuple> > datamap; //We don't need a vector here. I'll refactor later -Lalith
+std::map <char *, int > countmap;
+std::map <char *, alglib::real_2d_array > analysismap;
+std::map <std::string, double > last_val_map;
+std::map <char *, long long int > last_cpu;
+std::map <std::string, std::vector<double> > centroid_map;
+
+alglib::real_2d_array r2a;
 
 int maxtimerstats = 50;
 
-alglib::real_2d_array r2a;
+/* FIXME: Is there a quicker of doing the below? - Lalith */
+long long int getTicksFromPid (char *inPid)
+{
+  long long int pid;
+  char tcomm[PATH_MAX];
+  char state;
+
+  long long int ppid;
+  long long int pgid;
+  long long int sid;
+  long long int tty_nr;
+  long long int tty_pgrp;
+
+  long long int flags;
+  long long int min_flt;
+  long long int cmin_flt;
+  long long int maj_flt;
+  long long int cmaj_flt;
+  long long int utime;
+  long long int stimev;
+
+
+  FILE *input;
+
+  input = NULL;
+  std::stringstream filename;
+
+  // Every process has a /proc/pid/stat entry
+  filename << "/proc/" << inPid << "/stat";
+
+  input = fopen (filename.str().c_str(), "r");
+
+  // Need a more graceful way of handling this case
+  if(!input) {
+    fprintf (stderr, "File-open: Could not open stat file for %s\n", inPid);
+    return 0;
+  }
+
+  fscanf(input, "%lld ", &pid);
+  fscanf(input, "%s ", tcomm);
+  fscanf(input, "%c ", &state);
+  fscanf(input, "%lld ", &ppid);
+  fscanf(input, "%lld ", &pgid);
+  fscanf(input, "%lld ", &sid);
+  fscanf(input, "%lld ", &tty_nr);
+  fscanf(input, "%lld ", &tty_pgrp);
+  fscanf(input, "%lld ", &flags);
+  fscanf(input, "%lld ", &min_flt);
+  fscanf(input, "%lld ", &cmin_flt);
+  fscanf(input, "%lld ", &maj_flt);
+  fscanf(input, "%lld ", &cmaj_flt);
+
+  // We're interested only in these two,
+  // but we need to go through the rest
+  // of the file anyway.
+  fscanf(input, "%lld ", &utime);
+  fscanf(input, "%lld ", &stimev);
+  
+  fclose (input);
+
+  return utime + stimev;
+}
 
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 {
@@ -118,55 +203,66 @@ void show_wakeups(double d, double interval, double C0time)
 extern "C"{
 #endif
 
-void leave (int sig)
+void process_and_exit ()
 {
-  FILE *fp;
-  int i;
-  char str1[1023];
-  char hostname[1023];
-
-  alglib::ae_int_t x;
-  alglib::real_1d_array w;
-  alglib::fisherlda (r2a, 100, 2, 2, x, w);
-
-  printf ("\nFisher Algorithm has returned status: %d\n",x);
-  for (int i = 0; i < 2; i++)
+  /*
+  // Uncomment this section for debugging needs - Lalith
+  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+        i != analysismap.end (); i++)
     {
-      printf ("%f ", w[i]);
-    }
-  printf ("\n");
-
-  if (runmode != MONITOR_ONLY)
-    {
-      gethostname (hostname, 1023);
-      sprintf (str1, "traces_%s_%d", hostname, getpid ());
-
-      fp = fopen (str1, "w");
-      fprintf (stderr, "\nPreparing trace file %s\n", str1);
-      for (i = 0; i < mapcount; i++)
+      std::cerr << i->first << "\n";
+      
+      for (uint32_t j = 0; j < training_cycles; j++)
         {
-          fprintf (fp, "%5.1f %s\n", value_list[i], string_list[i]);
+          std::cerr << i->second[j][0] << " ";
         }
+      std::cerr << "\n";
+    }
+  */
+  assert (runmode == TRAIN_ONLY);
+  std::stringstream filename;
+  filename << "traces_" << getpid ();
 
-      fclose (fp);
+  std::fstream file_op(filename.str().c_str(),std::ios::out);
+
+  if (!file_op.is_open())
+    {
+      fprintf (stderr, "Cannot open trace file\n");
+    }
+  for (std::map<char *, alglib::real_2d_array >::const_iterator i = analysismap.begin ();
+      i != analysismap.end (); i++)
+    {
+      alglib::ae_int_t info;
+      alglib::real_2d_array C;
+      alglib::integer_1d_array xyc;
+
+      // Run k-means analysis on data with NPoints=training_cycles, NVars=3, NumClusters=2, NumRestarts=100
+      alglib::kmeansgenerate (i->second, training_cycles, 3, 2, 100, info, C, xyc);
+
+      if (info == 1)
+        {
+          // Need to test min-max consistency
+          file_op << min(C[0][0], C[0][1]) << " "     // irq1
+                  << max(C[0][0], C[0][1]) << " "     // irq2
+                  << min(C[1][0], C[1][1]) << " "     // disk1
+                  << max(C[1][0], C[1][1]) << " "     // disk2
+                  << min(C[2][0], C[2][1]) << " "     // cpu1
+                  << max(C[2][0], C[2][1]) << " "     // cpu2
+                  << i->first << "\n";                // We add the name last to make it easier to read later
+        }
     }
 
-  exit (sig);
+  fprintf (stderr, "Writing K-Means results to file: %s\n", filename.str().c_str());
+  file_op.close ();
+
+  exit (0);
 }
 
 #ifdef __cplusplus
 } //extern "C"
 #endif
 
-void training_mode_init ()
-{
-  r2a.setlength (100,3);
-}
-
-
-/* FIXME: Need to make this more clean */
-/* FIXME: Floating point bug */
-void monitor_mode_init (char *tracefile)
+void monitor_mode_init (char *tracefile, char *whitefile)
 {
   FILE *fp;
   int c;
@@ -176,7 +272,16 @@ void monitor_mode_init (char *tracefile)
 
   while (!feof (fp))
     {
-      fscanf (fp, "%f", &x);
+      // Push centroid coordinates onto a vector.
+      //                      0       1       2         3         4         5
+      // centroid_vect -> {C[0][0], C[0][1], C[1][0], C[1][1], C[2][0], C[2][1]}
+      std::vector<double> centroid_vect;
+      for (uint32_t i =0; i < 6; i++)
+        {
+          fscanf (fp, "%f", &x);
+          centroid_vect.push_back (x);
+        }
+
       char *tmp = NULL;
       tmp = (char *) malloc (sizeof (char) * 1023);
 
@@ -194,10 +299,19 @@ void monitor_mode_init (char *tracefile)
         {
           sprintf (tmp, "%s%c",tmp,c);
         }
-      string_list[mapcount] = tmp;
-      value_list[mapcount] = x;
-      mapcount++;
+
+      std::stringstream temp;
+      temp << tmp;
+      // By now we have the whole process name.
+      // So add to centroid map
+      centroid_map[temp.str()] = centroid_vect;
     } 
+
+  // See if whitelist is defined
+  read_whitelist (whitefile);
+
+  // Read confirmation callbacks
+  //read_confirmation_callback_conf ("conf/temp.conf");
 }
 
 void compute_timerstats(int nostats, int ticktime)
@@ -205,65 +319,189 @@ void compute_timerstats(int nostats, int ticktime)
 	int i;
   int flag = 0;
   static int numsamples = 0;
+  static bool complete = false;
 
 	if (!nostats) {
 		int counter = 0;
-		for (i = 0; i < linehead; i++)
-			if ((lines[i].count > 0 || lines[i].disk_count > 0) && counter++ < maxtimerstats)
-        {
-          flag = 0;
-          int k;
-          for (k = 0; k < mapcount; k++)
-            {
-              if (strncmp (string_list[k], lines[i].string, sizeof (char) * strlen (lines[i].string)) == 0)
-                {
-                  flag = 1;
-                  if (((double) lines[i].count - value_list[k]) * 1.0/ticktime > 100.0 && runmode != TRAIN_ONLY)
-                    {
-                      struct timeval tp;
-                      gettimeofday (&tp, NULL);
-                      printf ("--%5.1f: %5.1f %5.1f\t: %s\n", (double) tp.tv_sec, value_list[k] * 1.0/ticktime, lines[i].count * 1.0/ticktime, string_list[k]);
-                      printf ("\n");
-                    }
-                  if (runmode != MONITOR_ONLY)
-                    {
-                      value_list[k] =  0.1 * lines[i].count + (1 - 0.1) * value_list[k]; // Simple Exponential Smoothing
-                      if (strncmp (lines[i].string, "[iwlagn] <interrupt>", sizeof (char) * strlen (lines[i].string)) == 0)
-                        {
-                          if (numsamples != 100)
-                            {
-                              r2a[numsamples][0] = lines[i].count * 1.0/ticktime;
-                              r2a[numsamples][1] = lines[i].disk_count;
-                              r2a[numsamples][2] = 0;
-                              numsamples++;
-                            }
-                          else
-                            {
-                              printf ("\nPrinting collected samples\n");
-                              for (int t =0 ; t < 100; t++)
-                                printf ("%f ", r2a[t][0]);
-                            }
-                        }
-                    }
-                  break;
-                }
-            }
-          if (flag == 0 && runmode != MONITOR_ONLY)
-            {
-              string_list[mapcount] = (char *) malloc (sizeof(char) * (strlen (lines[i].string) + 1));
-              strncpy (string_list[mapcount], lines[i].string, sizeof(char) * (strlen (lines[i].string) + 1));
-              value_list[mapcount] = lines[i].count;// * 1.0/ticktime;
-              mapcount++;
-            } 
-				}
-	} else {
-		if (geteuid() == 0) {
-			printf("No detailed statistics available; please enable the CONFIG_TIMER_STATS kernel option\n");
-			printf("This option is located in the Kernel Debugging section of menuconfig\n");
-			printf("(which is CONFIG_DEBUG_KERNEL=y in the config file)\n");
-			printf("Note: this is only available in 2.6.21 and later kernels\n");
-		} else
-			printf("No detailed statistics available; PowerTOP needs root privileges for that\n");
-	}
 
+    /* Probably need to be careful about the disk utilisation params too */
+		for (i = 0; i < linehead; i++)
+      {
+        if ((lines[i].count > 0 || lines[i].disk_count > 0) && counter++ < maxtimerstats)
+          {
+            //printf(" %5.1f%% (%5.1f)  %s\n", lines[i].count * 100.0 / linectotal,
+            //  lines[i].count * 1.0 / ticktime,
+            //  lines[i].string);
+
+            if (runmode == TRAIN_ONLY)
+              {
+                data_tuple temp;
+
+                // Let the data collectors warmup
+                if (datamap.find (lines[i].string) == datamap.end ())
+                  {
+                    temp.cpu = 0;
+                    temp.irq = lines[i].count;
+                    temp.disk = lines[i].disk_count * 1.0/ticktime;
+                    temp.flag = 1;
+
+                    if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                      {
+                        last_cpu[lines[i].pid] = getTicksFromPid (lines[i].pid);
+                      }
+                    datamap[lines[i].string].push_back (temp); // We don't really need a vector here. I'll refactor later.
+                    countmap[lines[i].string] = 0;
+                    analysismap[lines[i].string].setlength (training_cycles, 3);
+                  }
+
+                // First entries actually goes in at this point
+                else if (datamap[lines[i].string].size () == 1 && datamap[lines[i].string][0].flag == 1)
+                  {
+                    temp.cpu = 0;
+                    temp.irq = (lines[i].count - datamap[lines[i].string][countmap[lines[i].string]].irq) * 1.0/ticktime;
+                    temp.disk = lines[i].disk_count * 1.0/ticktime;
+                    temp.flag = 0;
+
+                    //fprintf (stderr, "%s: %d\n", lines[i].string, temp.irq); 
+                    if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                      {
+                        long long int newcount = getTicksFromPid (lines[i].pid);
+                        temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                        last_cpu[lines[i].pid] = newcount;
+                      }
+                    countmap[lines[i].string] = 0;
+                    datamap[lines[i].string].push_back (temp);
+                    datamap[lines[i].string][datamap[lines[i].string].size () - 1].irq = lines[i].count;
+                    analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
+                    analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
+                    analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
+                  }
+
+                // Second entry on goes in from here
+                else
+                  {
+                    temp.cpu = 0;
+                    temp.irq = (lines[i].count  - datamap[lines[i].string][countmap[lines[i].string]].irq)* 1.0/ticktime;
+                    temp.disk = lines[i].disk_count * 1.0/ticktime;
+                    temp.flag = 0;
+                    
+                    //fprintf (stderr, "%s: %d\n", lines[i].string, temp.irq); 
+                    if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                      {
+                        long long int newcount = getTicksFromPid (lines[i].pid);
+                        temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                        last_cpu[lines[i].pid] = newcount;
+                      }
+                    datamap[lines[i].string].push_back (temp);
+                    datamap[lines[i].string][datamap[lines[i].string].size () - 1].irq = lines[i].count;
+                                      
+                    if (countmap[lines[i].string] < training_cycles - 1)
+                      {
+                        complete = false; 
+                        countmap[lines[i].string]++;
+                        analysismap[lines[i].string][countmap[lines[i].string]][0] = temp.irq;
+                        analysismap[lines[i].string][countmap[lines[i].string]][1] = temp.disk;
+                        analysismap[lines[i].string][countmap[lines[i].string]][2] = temp.cpu;
+                      }
+                    else
+                      {
+                        complete = true;
+                      }
+                  }
+
+                  if (complete == true)
+                    {
+                      process_and_exit ();
+                    }
+               }
+            else if (runmode == MONITOR_ONLY)
+              {
+                std::stringstream pcharToString;
+                pcharToString << lines[i].string;
+
+                // Warmup mechanism
+                if (last_val_map.find (pcharToString.str()) == last_val_map.end ())
+                  {
+                    if (centroid_map.find (pcharToString.str()) != centroid_map.end ())
+                      {
+                        data_tuple temp;
+                        temp.cpu = 0;
+                        temp.irq = lines[i].count * 1.0/ticktime;
+                        temp.disk = lines[i].disk_count * 1.0/ticktime;
+                        temp.flag = 0;
+
+                        if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                          {
+                            long long int newcount = getTicksFromPid (lines[i].pid);
+                            temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                            last_cpu[lines[i].pid] = newcount;
+                          }
+
+                        last_val_map[pcharToString.str()] = lines[i].count;
+                      }
+                  }
+                // Perform detection from here
+                else if (centroid_map.find (pcharToString.str()) != centroid_map.end () && lookup_whitelist (pcharToString.str().c_str()) == 0)
+                  {
+                    double distance1, distance2; // distance from both centroids
+                    double min;
+                    std::vector<double> centroid_vect;
+                    data_tuple temp;
+                    centroid_vect = centroid_map[lines[i].string];
+
+                    temp.cpu = 0;
+                    temp.irq = (lines[i].count - last_val_map[pcharToString.str()] )* 1.0/ticktime;
+                    temp.disk = lines[i].disk_count * 1.0/ticktime;
+                    temp.flag = 0;
+
+                    //fprintf (stderr, "Mon: %s: irq: %d\n", lines[i].string, temp.irq);
+                    if (strcmp (lines[i].pid, "0") !=0 && strcmp (lines[i].pid, "") != 0)
+                      {
+                        long long int newcount = getTicksFromPid (lines[i].pid);
+                        temp.cpu = (newcount - last_cpu[lines[i].pid]) * 1.0/ticktime;
+                        last_cpu[lines[i].pid] = newcount;
+                      }
+
+                    // Calculate Euclidian distance to each centroid
+                    // sqrt (dist(Cx,irq)^2 + dist(Cy,disk)^2 + dist(Cz,cpu)^2)
+                    distance1 = sqrt (  (centroid_vect[0] - temp.irq) * (centroid_vect[0] - temp.irq) 
+                                     +  (centroid_vect[2] - temp.disk) * (centroid_vect[2] - temp.disk)
+                                     +  (centroid_vect[4] - temp.cpu) * (centroid_vect[4] - temp.cpu)  );
+
+                    distance2 = sqrt (  (centroid_vect[1] - temp.irq) * (centroid_vect[1] - temp.irq) 
+                                     +  (centroid_vect[3] - temp.disk) * (centroid_vect[3] - temp.disk)
+                                     +  (centroid_vect[5] - temp.cpu) * (centroid_vect[5] - temp.cpu)  );
+
+                    last_val_map[pcharToString.str()] = lines[i].count;
+
+                    struct timeval tv;
+                    gettimeofday (&tv, 0);
+
+                    // If the new calculated point is further from
+                    // Centroid1 (legitimate) than Centroid2 (malicious),
+                    // then raise a suspicion
+                    if (distance1 > distance2)
+                      {
+                        // Ideally, we'd write this to a logfile
+                        fprintf (stderr, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
+                      }
+                  }
+              }
+          }
+      }
+	  } 
+  else 
+    {
+		  if (geteuid() == 0)
+        {
+    			printf("No detailed statistics available; please enable the CONFIG_TIMER_STATS kernel option\n");
+		    	printf("This option is located in the Kernel Debugging section of menuconfig\n");
+    			printf("(which is CONFIG_DEBUG_KERNEL=y in the config file)\n");
+    			printf("Note: this is only available in 2.6.21 and later kernels\n");
+		    }
+      else
+        {
+    			printf("No detailed statistics available; BatCop needs root privileges for that\n");
+        }
+  	}
 }

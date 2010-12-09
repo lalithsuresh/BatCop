@@ -41,8 +41,6 @@
 #include <signal.h>
 
 #include "batcop.h"
-#include "ap.h"
-#include "alglibinternal.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -57,7 +55,8 @@ double ticktime = 15.0;
 
 int interrupt_0, total_interrupt;
 
-int showpids = 0;
+int showpids = 1;
+int training_cycles = 10;
 
 static int maxcstate = 0;
 int topcstate = 0;
@@ -122,8 +121,8 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid)
 		if (strcmp(string, lines[i].string) == 0) {
 			lines[i].count += cpu_count;
 			lines[i].disk_count += disk_count;
-			if (pid && strcmp(lines[i].pid, pid)!=0)
-				lines[i].pid[0] = 0;
+//			if (pid && strcmp(lines[i].pid, pid)!=0)
+//				lines[i].pid[0] = 0;
 			return;
 		}
 	if (linehead == linesize)
@@ -836,9 +835,6 @@ void version()
 	exit(0);
 }
 
-void leave(int sig);
-
-
 int run_batcop(int argc, char **argv)
 {
 	char line[1024];
@@ -846,6 +842,7 @@ int run_batcop(int argc, char **argv)
 	uint64_t cur_usage[8], cur_duration[8];
 	double wakeups_per_second = 0;
   char *tracefile = NULL;
+  char *whitefile = NULL;
 
 	start_data_dirty_capture();
 
@@ -857,6 +854,8 @@ int run_batcop(int argc, char **argv)
  			{ "version", 0, NULL, 'v' },
  			{ "mode", 1, NULL, 'm' },
  			{ "file", 1, NULL, 'f' },
+ 			{ "cycles", 1, NULL, 'c' },
+ 			{ "whitefile", 1, NULL, 'w' },
  			{ 0, 0, NULL, 0 }
  		};
  		int index2 = 0, c;
@@ -883,6 +882,12 @@ int run_batcop(int argc, char **argv)
     case 'f':
       tracefile = optarg;
       break;
+    case 'c':
+      training_cycles = strtod (optarg, NULL);
+      break;
+    case 'w':
+      whitefile = optarg;
+      break;
  		default:
  			;
  		}
@@ -893,7 +898,6 @@ int run_batcop(int argc, char **argv)
       fprintf (stdout, "\nRunning in TRAIN_ONLY mode\n");
       if (tracefile != NULL)
         fprintf (stdout, "Input file will not be used\n");
-      training_mode_init ();
     }
   else if (runmode == MONITOR_ONLY)
     {
@@ -908,7 +912,7 @@ int run_batcop(int argc, char **argv)
           exit (-1);
         }
       fprintf (stdout, "\nRunning MONITOR_ONLY mode with trace file %s\n", tracefile);
-      monitor_mode_init (tracefile);
+      monitor_mode_init (tracefile, whitefile);
     }
   else if (runmode == DYNAMIC)
     {
@@ -919,8 +923,6 @@ int run_batcop(int argc, char **argv)
       fprintf (stderr, "\nError: Mode not recognised\n");
       exit (-1);
     }
-
-  (void) signal (SIGINT, leave);
 
 	system("/sbin/modprobe cpufreq_stats > /dev/null 2>&1");
 	read_data(&start_usage[0], &start_duration[0]);
@@ -981,6 +983,40 @@ int run_batcop(int argc, char **argv)
 		memset(&cstate_lines, 0, sizeof(cstate_lines));
 		topcstate = -4;
 
+    if (totalevents == 0 && maxcstate <= 1) {
+      sprintf(cstate_lines[5],_("< Detailed C-state information is not available.>\n"));
+    } else {
+      double sleept, percentage;
+      c0 = sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ - totalticks;
+      if (c0 < 0)
+        c0 = 0; /* rounding errors in measurement might make c0 go slightly negative.. this is confusing */
+      sprintf(cstate_lines[0], _("Cn\t          Avg residency\n"));
+
+      percentage = c0 * 100.0 / (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
+      sprintf(cstate_lines[1], _("C0 (cpu running)        (%4.1f%%)\n"), percentage);
+      if (percentage > 50)
+        topcstate = 0;
+      for (i = 0; i < 8; i++)
+        if (cur_usage[i]) {
+          sleept = (cur_duration[i] - last_duration[i]) / (cur_usage[i] - last_usage[i]
+                      + 0.1) / FREQ;
+          percentage = (cur_duration[i] -
+                last_duration[i]) * 100 /
+               (sysconf(_SC_NPROCESSORS_ONLN) * ticktime * 1000 * FREQ);
+
+          if (cnames[i][0]==0)
+            sprintf(cnames[i],"C%i",i+1);
+          sprintf
+              (cstate_lines[2+i], _("%s\t%5.1fms (%4.1f%%)\n"),
+               cnames[i], sleept, percentage);
+          if (maxsleep < sleept)
+            maxsleep = sleept;
+          if (percentage > 50)
+            topcstate = i+1;
+
+        }
+    }
+
 		/* now the timer_stats info */
 		memset(line, 0, sizeof(line));
 		totalticks = 0;
@@ -1039,7 +1075,7 @@ int run_batcop(int argc, char **argv)
 				continue;
 			if (strncmp(func, "tick_setup_sched_timer", 20) == 0)
 				continue;
-			if (strcmp(process, "powertop") == 0)
+			if (strcmp(process, "batcop") == 0)
 				continue;
 			if (c)
 				*c = 0;
@@ -1111,13 +1147,8 @@ int run_batcop(int argc, char **argv)
 }
 
 #ifdef __cplusplus
-} // extern "C"
-#endif
-
-void blah ()
-{
-  alglib::real_1d_array    rvec("[0,1,2,3]");
 }
+#endif
 
 int main (int argc, char **argv)
 {

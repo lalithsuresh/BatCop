@@ -8,8 +8,6 @@ diagnosis tool, we decided PowerTOP can be used for much
 more than that. We thus present, BatCop, a battery attack
 detection system. The equation leading to BatCop is as follows:
 
-PowerTOP - UI - suggestions + Statistical Analysis Engine + Training Mechanism = BatCop
-
 We leverage upon the diagnosis capabilities of PowerTOP, 
 perform our own statistical analysis of the values reported by
 PowerTOP's IRQ monitoring system, and detect anomalies in the
