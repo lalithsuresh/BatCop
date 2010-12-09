@@ -41,6 +41,7 @@
 #include "ap.h"
 #include "alglibinternal.h"
 #include "dataanalysis.h"
+#include "cfm-callback.h"
 
 static WINDOW *battery_power_window;
 
@@ -308,6 +309,9 @@ void monitor_mode_init (char *tracefile, char *whitefile)
 
   // See if whitelist is defined
   read_whitelist (whitefile);
+
+  // Read confirmation callbacks
+  //read_confirmation_callback_conf ("conf/temp.conf");
 }
 
 void compute_timerstats(int nostats, int ticktime)

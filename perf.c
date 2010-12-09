@@ -24,7 +24,6 @@
  * 	Arjan van de Ven <arjan@linux.intel.com>
  */
 
-#define _GNU_SOURCE        /* or _BSD_SOURCE or _SVID_SOURCE */
 #include <unistd.h>
 #include <sys/syscall.h>   /* For SYS_xxx definitions */
 #include <stdio.h>
@@ -40,8 +39,7 @@
 
 #include "perf_event.h"
 
-#include "batcop.h"
-
+extern void push_line_pid(char *string, int cpu_count, int disk_count, char *pid);
 
 /* some people have stale headers */
 #ifndef __NR_perf_event_open
@@ -231,11 +229,11 @@ static void parse_event(void *ptr, int verbose)
 
 	if (!suggested && strcmp(event->inode.file, "?")) {
 		suggested = 1;
-		sprintf(line,_("The program '%s' is writing to file '%s' on /dev/%s.\nThis prevents the disk from going to powersave mode."),
+		sprintf(line,"The program '%s' is writing to file '%s' on /dev/%s.\nThis prevents the disk from going to powersave mode.",
 			event->inode.comm, event->inode.file, event->inode.dev);
 	}
 	if (verbose) 
-		printf(_("The application '%s' is writing to file '%s' on /dev/%s\n"),
+		printf("The application '%s' is writing to file '%s' on /dev/%s\n",
 			event->inode.comm, event->inode.file, event->inode.dev);
 
 }

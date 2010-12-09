@@ -41,8 +41,6 @@
 #include <signal.h>
 
 #include "batcop.h"
-#include "ap.h"
-#include "alglibinternal.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -1149,13 +1147,8 @@ int run_batcop(int argc, char **argv)
 }
 
 #ifdef __cplusplus
-} // extern "C"
-#endif
-
-void blah ()
-{
-  alglib::real_1d_array    rvec("[0,1,2,3]");
 }
+#endif
 
 int main (int argc, char **argv)
 {

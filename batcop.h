@@ -34,10 +34,7 @@
 
 #define VERSION "1.12"
 
-#ifdef __cplusplus
 extern "C" {
-#endif
-
 struct line {
 	char	*string;
 	int	count;
@@ -108,9 +105,6 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid);
 void start_data_dirty_capture(void);
 void end_data_dirty_capture(void);
 void parse_data_dirty_buffer(void);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+}
 
 #endif

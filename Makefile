@@ -14,7 +14,7 @@ CFLAGS?=-O1 -g ${WARNFLAGS}
 # libncursesw5-dev package. 
 #
 
-OBJS = batcop.o analysis.o perf.o\
+OBJS = batcop.o perf.o cfm-callback.o analysis.o\
        alglibinternal.o alglibmisc.o ap.o\
        dataanalysis.o optimization.o linalg.o\
 	     specialfunctions.o statistics.o solvers.o\
