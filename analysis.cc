@@ -262,7 +262,7 @@ void process_and_exit ()
 } //extern "C"
 #endif
 
-void monitor_mode_init (char *tracefile, char *whitefile)
+void monitor_mode_init (char *tracefile, char *whitefile, char *cbfile)
 {
   FILE *fp;
   int c;
@@ -312,10 +312,22 @@ void monitor_mode_init (char *tracefile, char *whitefile)
     {
       read_whitelist (whitefile);
     }
+  else
+    {
+      fprintf (stderr, "* No whitelist file defined. All processes will be now under watch.\n");
+    }
 
   // Read confirmation callbacks
-  std::string fname ("conf/temp.conf");
-  read_confirmation_callback_conf (fname.c_str());
+  std::string fname (cbfile);
+
+  if (cbfile != NULL)
+    {
+      read_confirmation_callback_conf (fname.c_str());
+    }
+  else
+    {
+      fprintf (stderr, "* No callback list defined.\n");
+    }
 }
 
 void compute_timerstats(int nostats, int ticktime)

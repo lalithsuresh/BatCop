@@ -53,7 +53,7 @@ extern int             training_cycles;
 
 extern double displaytime;
 
-void monitor_mode_init(char *tracefile, char *whitefile);
+void monitor_mode_init(char *tracefile, char *whitefile, char *cbfile);
 void training_mode_init();
 void show_wakeups(double d, double interval, double C0time);
 
