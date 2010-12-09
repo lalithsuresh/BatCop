@@ -43,6 +43,8 @@
 
 #include "batcop.h"
 
+// PowerTOP was originally C, this
+// allows BatCop to use C-C++ linkage.
 #ifdef __cplusplus
 extern "C"
 {
@@ -94,6 +96,8 @@ time_t prev_bat_time = 0;
 
 double displaytime = 0.0;
 
+// This enables a graceful exit. Else logfiles
+// get corrupted.
 void leave (int sig)
 {
   struct timeval tv;
@@ -103,6 +107,7 @@ void leave (int sig)
   exit (sig);
 }
 
+// From PowerTOP. Modified for BatCop.
 void push_line(char *string, int count)
 {
 	int i;
@@ -123,6 +128,7 @@ void push_line(char *string, int count)
 	linehead++;
 }
 
+// From PowerTOP. Modified for BatCop.
 void push_line_pid(char *string, int cpu_count, int disk_count, char *pid) 
 {
 	int i;
@@ -147,6 +153,7 @@ void push_line_pid(char *string, int cpu_count, int disk_count, char *pid)
 	linehead++;
 }
 
+// From PowerTOP.
 void count_lines(void)
 {
 	uint64_t q = 0;
@@ -156,6 +163,7 @@ void count_lines(void)
 	linectotal = q;
 }
 
+// From PowerTOP.
 int update_irq(int irq, uint64_t count, char *name)
 {
 	int i;
@@ -184,6 +192,7 @@ int update_irq(int irq, uint64_t count, char *name)
 	return count;
 }
 
+// From PowerTOP.
 static int percpu_hpet_timer(char *name)
 {
 	static int timer_list_read;
@@ -236,6 +245,7 @@ static int percpu_hpet_timer(char *name)
 	return 0;
 }
 
+// From PowerTOP.
 static void do_proc_irq(void)
 {
 	FILE *file;
@@ -332,6 +342,7 @@ static void do_proc_irq(void)
 	fclose(file);
 }
 
+// FIXME: From PowerTOP. Unused for now. Remove later.
 static void read_data_acpi(uint64_t * usage, uint64_t * duration)
 {
 	DIR *dir;
@@ -382,6 +393,7 @@ static void read_data_acpi(uint64_t * usage, uint64_t * duration)
 	closedir(dir);
 }
 
+// From PowerTOP.
 static void read_data_cpuidle(uint64_t * usage, uint64_t * duration)
 {
 	DIR *cpudir;
@@ -489,6 +501,7 @@ static void read_data_cpuidle(uint64_t * usage, uint64_t * duration)
 	closedir(cpudir);
 }
 
+// From PowerTOP.
 static void read_data(uint64_t * usage, uint64_t * duration)
 {
 	int r;
@@ -515,6 +528,7 @@ static void read_data(uint64_t * usage, uint64_t * duration)
 	}
 }
 
+// From PowerTOP.
 void stop_timerstats(void)
 {
 	FILE *file;
@@ -526,6 +540,8 @@ void stop_timerstats(void)
 	fprintf(file, "0\n");
 	fclose(file);
 }
+
+// From PowerTOP.
 void start_timerstats(void)
 {
 	FILE *file;
@@ -538,19 +554,20 @@ void start_timerstats(void)
 	fclose(file);
 }
 
+// From PowerTOP.
 int line_compare (const void *av, const void *bv)
 {
 	const struct line	*a = (const struct line *) av, *b = (const struct line *)bv;
 	return (b->count + 50 * b->disk_count) - (a->count + 50 * a->disk_count);
 }
 
+// From PowerTOP.
 void sort_lines(void)
 {
 	qsort (lines, linehead, sizeof (struct line), line_compare);
 }
 
-
-
+// FIXME: From PowerTOP. Unused for now. Remove later
 int print_battery_proc_acpi(void)
 {
 	DIR *dir;
@@ -638,6 +655,7 @@ int print_battery_proc_acpi(void)
 	return 1;
 }
 
+// FIXME: From PowerTOP. Unused for now. Remove later
 int print_battery_proc_pmu(void)
 {
 	char line[80];
@@ -846,6 +864,11 @@ void version()
 	exit(0);
 }
 
+// Heavily modified version of the PowerTOP main routine.
+// Changes: All suggestion-code removed, all unnecessary
+// monitors removed (and much more).
+// Adds: More cmdline options, and calls initialisation
+// routines for BatCop's training and monitor modes
 int run_batcop(int argc, char **argv)
 {
 	char line[1024];
@@ -1190,8 +1213,9 @@ int run_batcop(int argc, char **argv)
 
 #ifdef __cplusplus
 }
-#endif
+#endif // extern "C"
 
+// Technically, this never returns.
 int main (int argc, char **argv)
 {
   run_batcop (argc, argv);

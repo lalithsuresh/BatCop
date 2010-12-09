@@ -58,18 +58,36 @@ typedef struct data_tuple_ data_tuple;
 
 static int mapcount = 0;
 
-std::map <char *, std::vector<data_tuple> > datamap; //We don't need a vector here. I'll refactor later -Lalith
+//We don't need a vector here. I'll refactor later -Lalith
+std::map <char *, std::vector<data_tuple> > datamap;
+
+// When collecting data for training mode, we track how many 
+// data-points we have per process with the below map.
 std::map <char *, int > countmap;
+
+// Data in this is finally processed
 std::map <char *, alglib::real_2d_array > analysismap;
+
+// This lets us calculate the running deltas
 std::map <std::string, double > last_val_map;
+
+// This is required exclusively for keeping track of CPU
+// utilisation per process from /proc/pid/stat
 std::map <char *, long long int > last_cpu;
+
+// During monitor mode, this map stores the centroids
+// calculated for each process from the k-means analysis
+// performed during training mode
 std::map <std::string, std::vector<double> > centroid_map;
 
 alglib::real_2d_array r2a;
 
 int maxtimerstats = 50;
 
-/* FIXME: Is there a quicker of doing the below? - Lalith */
+// Function to collected CPU utilisation in a given period
+// per application. This extracts the number of jiffies
+// a process has used in both user space and kernel space
+// combined.
 long long int getTicksFromPid (char *inPid)
 {
   long long int pid;
@@ -132,6 +150,7 @@ long long int getTicksFromPid (char *inPid)
   return utime + stimev;
 }
 
+// FIXME: From PowerTOP. Unused for now. Remove later.
 void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 {
 	char buffer[1024];
@@ -154,6 +173,7 @@ void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 	wrefresh(battery_power_window);
 }
 
+// FIXME: From PowerTOP. Unused for now. Remove later.
 void show_pmu_power_line(unsigned sum_voltage_mV,
                          unsigned sum_charge_mAh, unsigned sum_max_charge_mAh,
                          int sum_discharge_mA)
@@ -191,7 +211,8 @@ void show_pmu_power_line(unsigned sum_voltage_mV,
 	wrefresh(battery_power_window);
 }
 
-
+// Uncomment this to display wakeups-from-idle per second
+// (from PowerTOP)
 void show_wakeups(double d, double interval, double C0time)
 {
 //	printf("Wakeups-from-idle per second : %4.1f\tinterval: %0.1fs\n", d, interval);
@@ -217,6 +238,8 @@ void process_and_exit ()
       std::cerr << "\n";
     }
   */
+
+  // If anyone else calls this, die.
   assert (runmode == TRAIN_ONLY);
   std::stringstream filename;
   filename << "traces_" << getpid ();
@@ -260,6 +283,10 @@ void process_and_exit ()
 } //extern "C"
 #endif
 
+// This method prepares the centroid maps from the tracefile
+// (generated from a training run), reads the whitelist of
+// processes to be ignored, and finally the list of callbacks
+// for confirming suspicions from a particular process
 void monitor_mode_init (char *tracefile, char *whitefile, char *cbfile)
 {
   FILE *fp;
@@ -328,6 +355,9 @@ void monitor_mode_init (char *tracefile, char *whitefile, char *cbfile)
     }
 }
 
+// The heart of batcop. This method puts together the
+// data in training mode, and performs the analysis
+// during monitor mode.
 void compute_timerstats(int nostats, int ticktime)
 {
 	int i;
@@ -508,14 +538,14 @@ void compute_timerstats(int nostats, int ticktime)
     {
 		  if (geteuid() == 0)
         {
-    			printf("No detailed statistics available; please enable the CONFIG_TIMER_STATS kernel option\n");
-		    	printf("This option is located in the Kernel Debugging section of menuconfig\n");
-    			printf("(which is CONFIG_DEBUG_KERNEL=y in the config file)\n");
-    			printf("Note: this is only available in 2.6.21 and later kernels\n");
+    			fprintf(logfile, "No detailed statistics available; please enable the CONFIG_TIMER_STATS kernel option\n");
+		    	fprintf(logfile, "This option is located in the Kernel Debugging section of menuconfig\n");
+    			fprintf(logfile, "(which is CONFIG_DEBUG_KERNEL=y in the config file)\n");
+    			fprintf(logfile, "Note: this is only available in 2.6.21 and later kernels\n");
 		    }
       else
         {
-    			printf("No detailed statistics available; BatCop needs root privileges for that\n");
+    			fprintf(logfile, "No detailed statistics available; BatCop needs root privileges for that\n");
         }
   	}
 }

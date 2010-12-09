@@ -31,11 +31,15 @@
 
 std::map <std::string, std::vector<std::string> > callbacks;
 
+// Registers a confirmation callback for a
+// particular process
 void register_callback (std::string script, std::string process)
 {
   callbacks[process].push_back(script);
 }
 
+// Called by compute_timerstats() (analysis.cc)
+// upon detection of any suspicion.
 void trigger_callbacks (char *process)
 {
   int pid;
@@ -57,6 +61,8 @@ void trigger_callbacks (char *process)
     }
 }
 
+// Read from conf file to populate the callbacks
+// map with <process, actions> tuples.
 void read_confirmation_callback_conf (const char *conffile)
 {
 
