@@ -308,10 +308,14 @@ void monitor_mode_init (char *tracefile, char *whitefile)
     } 
 
   // See if whitelist is defined
-  read_whitelist (whitefile);
+  if (whitefile != NULL)
+    {
+      read_whitelist (whitefile);
+    }
 
   // Read confirmation callbacks
-  //read_confirmation_callback_conf ("conf/temp.conf");
+  std::string fname ("conf/temp.conf");
+  read_confirmation_callback_conf (fname.c_str());
 }
 
 void compute_timerstats(int nostats, int ticktime)
@@ -484,6 +488,7 @@ void compute_timerstats(int nostats, int ticktime)
                       {
                         // Ideally, we'd write this to a logfile
                         fprintf (stderr, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
+                        trigger_callbacks (lines[i].string);
                       }
                   }
               }

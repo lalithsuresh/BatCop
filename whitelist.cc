@@ -46,7 +46,7 @@ void read_whitelist (const char *conffile)
   std::ifstream whitefile (conffile);
   if (!whitefile.is_open ())
     {
-      std::cerr << "Error: Cannot open " << conffile << "\n";
+      std::cerr << "Error: read_whitelist: Cannot open " << conffile << "\n";
       exit (1);
     }
 
