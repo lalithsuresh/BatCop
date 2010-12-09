@@ -1,5 +1,8 @@
 #!/bin/sh
 
+logfile="/var/log/batcop/detect_floods.log"
+touch $logfile
+
 #reading the subnet value from conf file
 subnetCIDR=`cat subnetCIDR.conf`
 
@@ -37,7 +40,7 @@ echo "** Boring network, no attacks detected."
 else
 #commented to fix uniq problem cat log/alert | awk '{print $4","$9","$11}' | sort | uniq > log/attacks_detected.txt
 cat log/alert | awk '{print $4","substr($9,1,index($9,":")-1)","substr($11,1,index($11,":")-1)}' | sort | uniq > log/attacks_detected.txt
-cat log/attacks_detected.txt 
+cat log/attacks_detected.txt > $logfile
 # Taking actions on the attacks if configured in recovery.conf 
 attacks=`cat log/attacks_detected.txt`
 for attack in $attacks
@@ -48,12 +51,12 @@ attack_src=`echo $attack | awk -F',' '{print $2}' | awk -F':' '{print $1}'`
 attack_dst=`echo $attack | awk -F',' '{print $3}' | awk -F':' '{print $1}'`
 if [ "$attack_src" != `./getIP.sh` ];
 then
-echo $attack_type" detected from "$attack_src
+echo $attack_type" detected from "$attack_src > $logfile
 
 	list_of_scripts=`cat $recovery_scripts_file | grep $attack_type | awk '{print $2}'`
         for script in $list_of_scripts
                do
-               ./$script $attack_src
+               ./$script $attack_src > $logfile
                done
 
 fi
