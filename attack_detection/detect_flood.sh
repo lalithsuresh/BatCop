@@ -1,10 +1,10 @@
 #!/bin/sh
 
-logfile="/var/log/batcop/detect_floods.log"
-touch $logfile
+logfile="/var/log/batcop/detect_flood.log"
+sudo touch $logfile
 
 #reading the subnet value from conf file
-subnetCIDR=`cat subnetCIDR.conf`
+subnetCIDR=`cat ../conf/subnetCIDR.conf`
 
 #if [ -z "$1" ];
 #then
@@ -16,31 +16,32 @@ subnetCIDR=`cat subnetCIDR.conf`
 # Number of seconds snort should run for
 seconds=6
 # Scripts to be executed on attack detection
-recovery_scripts_file="recovery.conf"
+recovery_scripts_file="../conf/recovery.conf"
 
 # Removing previous snort files
 sudo rm -f log/alert
 
 # Adding the subnet value in myrules.conf
 subnet=$subnetCIDR
+snortrules="../conf/myrules.conf"
 echo "var HOME_NET "$subnet > subnet.txt 
-cat subnet.txt myrules.conf > myrules_temp.conf
+cat subnet.txt $snortrules > myrules_temp.conf
 
 # Starting snort in daemon mode and then sleeping for a few seconds
 sudo snort -d -l ./log -c myrules_temp.conf  -A fast -D
 sleep $seconds 
 
-# Killing snort - there should be a better way of doing this
+# Killing snort after sleeping for $seconds
 sudo killall snort
 
 # Outputting the snort results
 if [ `cat log/alert | wc -l` -eq 0  ];
 then
-echo "** Boring network, no attacks detected."
+echo [`date +%s`]" Boring network, no attacks detected."
 else
 #commented to fix uniq problem cat log/alert | awk '{print $4","$9","$11}' | sort | uniq > log/attacks_detected.txt
 cat log/alert | awk '{print $4","substr($9,1,index($9,":")-1)","substr($11,1,index($11,":")-1)}' | sort | uniq > log/attacks_detected.txt
-cat log/attacks_detected.txt > $logfile
+sudo cat log/attacks_detected.txt >> $logfile
 # Taking actions on the attacks if configured in recovery.conf 
 attacks=`cat log/attacks_detected.txt`
 for attack in $attacks
@@ -51,14 +52,13 @@ attack_src=`echo $attack | awk -F',' '{print $2}' | awk -F':' '{print $1}'`
 attack_dst=`echo $attack | awk -F',' '{print $3}' | awk -F':' '{print $1}'`
 if [ "$attack_src" != `./getIP.sh` ];
 then
-echo $attack_type" detected from "$attack_src > $logfile
+sudo echo `date +%s`" "$attack_type" detected from "$attack_src >> $logfile
 
 	list_of_scripts=`cat $recovery_scripts_file | grep $attack_type | awk '{print $2}'`
         for script in $list_of_scripts
                do
-               ./$script $attack_src > $logfile
+               sudo ./$script $attack_src >> $logfile
                done
-
 fi
 done
 
