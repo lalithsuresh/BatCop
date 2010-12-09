@@ -41,6 +41,8 @@ int lookup_whitelist (const char *name)
     }
 }
 
+// Read from a whitelist file. Any process mentioned in
+// this file is ignored during MONITOR mode.
 void read_whitelist (const char *conffile)
 {
   std::ifstream whitefile (conffile);
