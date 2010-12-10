@@ -1,5 +1,6 @@
 #!/bin/sh
 
+cd attack_detection
 logfile="/var/log/batcop/detect_flood.log"
 sudo touch $logfile
 
@@ -40,8 +41,15 @@ then
 echo [`date +%s`]" Boring network, no attacks detected."
 else
 #commented to fix uniq problem cat log/alert | awk '{print $4","$9","$11}' | sort | uniq > log/attacks_detected.txt
-cat log/alert | awk '{print $4","substr($9,1,index($9,":")-1)","substr($11,1,index($11,":")-1)}' | sort | uniq > log/attacks_detected.txt
-sudo cat log/attacks_detected.txt >> $logfile
+#cat log/alert | awk '{print $4","substr($9,1,index($9,":")-1)","substr($11,1,index($11,":")-1)}' | sort | uniq > log/attacks_detected.txt
+cat log/alert | awk '{print $4","$9","$11}' | awk -F',' '{
+         flag = match($2, ":")
+         if (flag)
+           print $1","substr($2,1,index($2,":")-1)","substr($3,1,index($3,":")-1)
+        else
+          print $1","$2","$3
+}' | sort | uniq > log/attacks_detected.txt
+sudo cat log/attacks_detected.txt | awk '{print d,$0}' "d=$(date +%s)" >> $logfile
 # Taking actions on the attacks if configured in recovery.conf 
 attacks=`cat log/attacks_detected.txt`
 for attack in $attacks
