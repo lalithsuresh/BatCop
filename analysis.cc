@@ -169,7 +169,7 @@ void show_acpi_power_line(double rate, double cap, double capdelta, time_t ti)
 	else if (ti>120 && capdelta > 0.001)
 		sprintf(buffer, _("Power usage (5 minute ACPI estimate) : %5.1f W (%3.1f hours left)"), 3600*capdelta / ti, cap / (3600*capdelta/ti+0.01));
 
-	print(battery_power_window, 0, 0, "%s\n", buffer);	
+	//print(battery_power_window, 0, 0, "%s\n", buffer);	
 	wrefresh(battery_power_window);
 }
 
@@ -207,7 +207,7 @@ void show_pmu_power_line(unsigned sum_voltage_mV,
 			 _("no power usage estimate available") );
 
 	werase(battery_power_window);
-	print(battery_power_window, 0, 0, "%s\n", buffer);
+	//print(battery_power_window, 0, 0, "%s\n", buffer);
 	wrefresh(battery_power_window);
 }
 
