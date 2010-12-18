@@ -2,15 +2,15 @@ README for generating floods
 
 Three scripts:
 -scanner.sh 
-	scans the ip range (provided as input) and outputs the UP hosts
-	Usage: ./scanner.sh 192.168.1.*
+	scans the ip range (mentioned in CIDR format in "conf/subnetCIDR.conf") and outputs the UP hosts
+	Usage: ./scanner.sh 
 -pingflood.sh
 	generates a ping flood on an IP using the ping utility
 	Usage: ./pingflood.sh 192.168.1.83
 -flood.sh
 	can generate three types of floods using hping3
-	Usage: ./flood.sh 192.168.1.83 ack
-		./flood.sh 192.168.1.83 ping
+	Usage: ./flood.sh 192.168.1.83 tcp
 		./flood.sh 192.168.1.83 syn
+		./flood.sh 192.168.1.83 ack
 
 

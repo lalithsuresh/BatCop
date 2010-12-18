@@ -1,18 +1,21 @@
 ** Readme for detect_flood.sh
 
 Usage:
-detect_flood.sh 192.168.206.1/24
+attack_detection/detect_flood.sh
 
 Output:
 -if no attacks are detected it will output "** Boring network, no attacks detected."
--if attacks are detected they will be printed in standard snort format, for example:
+-if attacks are detected they will be written to the file "log/alert" in standard snort format , for example:
 	11/27-09:01:45.825956  [**] [1:477000:3] ICMP flood detected [**] [Priority: 0] {ICMP} 192.168.206.1 -> 192.168.206.133
--there can be multiple lines of output depending on the volume of the attack
+-there can be multiple lines of output depending on the volume of the attack but the "detect_flood.sh" script will only output unique attack sources
 
 
 Note:
-As of now, there are two rules in the myrules.conf file.
+There are two rules in the myrules.conf file. However more rules can be added easily to detect more types of floods.
 	Rule 1 (ICMP echo flood detection):
 		It creates an alert if the number of ICMP echo requests being received in 5 seconds is greater than 50
 	Rule 2 (TCP flood detection):
-		It creates an alert if the number of TCP packets being uploaded in 5 seconds is equal to or greater than 50. This rule assumes that the TCP upload traffic for a normal user is never greater than		  50 packets per 5 seconds. There is a chance of false positives if the user is using a file sharing application.
+		It creates an alert if the number of TCP packets being uploaded in 5 seconds is equal to or greater than 50. 
+		This rule will detect TCP SYN flood and TCP ACK flood because in both attacks the TCP upload is abnormally huge.
+		This rule assumes that the TCP upload traffic for a normal user is never greater than 50 packets per 5 seconds.
+		There will false positives if the user is using a file sharing application.

