@@ -4,6 +4,7 @@
 
 cd attack_detection
 logfile="/var/log/batcop/detect_flood.log"
+interface=wlan0
 sudo touch $logfile
 
 #reading the subnet value from conf file
@@ -24,7 +25,7 @@ echo "var HOME_NET "$subnet > subnet.txt
 cat subnet.txt $snortrules > myrules_temp.conf
 
 # Starting snort in daemon mode and then sleeping for a few seconds
-sudo snort -d -l ./log -c myrules_temp.conf  -A fast -D
+sudo snort -d -l ./log -c myrules_temp.conf  -A fast -D -i $interface
 sleep $seconds 
 
 # Killing snort after sleeping for $seconds
@@ -33,7 +34,7 @@ sudo killall snort
 # Outputting the snort results
 if [ `cat log/alert | wc -l` -eq 0  ];
 then
-echo [`date +%s`]" Boring network, no attacks detected."
+echo [`date`]" Boring network, no attacks detected." | tee -a $logfile
 else
 	#commented to fix uniq problem cat log/alert | awk '{print $4","$9","$11}' | sort | uniq > log/attacks_detected.txt
 	#cat log/alert | awk '{print $4","substr($9,1,index($9,":")-1)","substr($11,1,index($11,":")-1)}' | sort | uniq > log/attacks_detected.txt
@@ -64,7 +65,6 @@ else
               	done
 		fi
 		done
-
 fi
 
 # Cleaning up and Exiting
