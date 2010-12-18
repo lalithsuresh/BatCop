@@ -6,31 +6,31 @@ was designed to spot applications that were consuming
 too much power. Although initially designed to be a
 diagnosis tool, we decided PowerTOP can be used for much
 more than that. We thus present, BatCop, a battery attack
-detection system. The equation leading to BatCop is as follows:
+detection system.
 
 We leverage upon the diagnosis capabilities of PowerTOP, 
-perform our own statistical analysis of the values reported by
-PowerTOP's IRQ monitoring system, and detect anomalies in the
-power consumption profiles of each application.
+add a bit more of our own (e.g, CPU consumption monitoring),
+perform statistical analysis of the values reported by
+the monitoring engine, and detect anomalies in the
+working profiles of each application.
 
 To train BatCop:
 
-$: sudo batcop --mode=0
+$: sudo batcop --mode=0 --cycles=<number of training cycles>
 
 Leave this running for a while to let BatCop analyse the
 current profile of the running system. The more data it collects,
 the stronger it's guess will be when it attempts to monitor
-the system later on for anomalies. Terminating the program
-will lead to a trace file being generated. This can be used
+the system later on for anomalies. This can be used
 as an input for the monitor mode operation.
 
 To monitor the system using BatCop:
 
-$: sudo batcop --mode=1 --file=<dump_file>
+$: sudo batcop --mode=1 --file=<dump_file> --cbfile=<callback_file> --whitefile=<whitelist> --logfile=<logfile>
 
-To do both, (not stable as far as verdicts are concerned):
-
-$: sudo batcop --mode=2
+To see an example <callback_file>, look at conf/temp.conf.
+The whitelist is a list of process names that are to be ignored
+by BatCop. Logfile defaults to stderr.
 
 
 Credits

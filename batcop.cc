@@ -850,9 +850,12 @@ void usage()
 {
 	printf(_("Usage: powertop [OPTION...]\n"));
 	printf(_("  -m, --mode            0 == TRAIN_ONLY, 1 == MONITOR_ONLY, 2 == DYNAMIC_ONLY\n"));
-	printf(_("  -f, --file            input file for MONITOR_ONLY mode\n"));
+	printf(_("  -w, --whitefile       List of processes to ignore (monitor mode only)\n"));
+	printf(_("  -b, --cbfile          List of confirmation callbacks (monitor mode only)\n"));
+	printf(_("  -b, --logfile         Logfile (monitor mode only)\n"));
+	printf(_("  -c, --cycles          Number of training cycles (training mode only)\n"));
+	printf(_("  -f, --file            input file (monitor mode only)\n"));
 	printf(_("  -t, --time=DOUBLE     default time to gather data in seconds\n"));
-	printf(_("  -p, --pids            show pids in wakeups list\n"));
 	printf(_("  -h, --help            Show this help message\n"));
 	printf(_("  -v, --version         Show version information and exit\n"));
 	exit(0);
@@ -860,7 +863,7 @@ void usage()
 
 void version()
 {
-	printf(_("powertop version %s\n"), VERSION);
+	printf(_("BatCop version %s\n"), VERSION);
 	exit(0);
 }
 

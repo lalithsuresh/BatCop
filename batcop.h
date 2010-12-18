@@ -32,7 +32,7 @@
 #include <libintl.h>
 #include "ap.h"
 
-#define VERSION "1.12"
+#define VERSION "0.01"
 
 extern "C" {
 struct line {
