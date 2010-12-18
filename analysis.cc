@@ -524,6 +524,7 @@ void compute_timerstats(int nostats, int ticktime)
                     // If the new calculated point is further from
                     // Centroid1 (legitimate) than Centroid2 (malicious),
                     // then raise a suspicion
+                    fprintf (logfile, "%ld: %s --- %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
                     if (distance1 > distance2)
                       {
                         fprintf (logfile, "%ld: %s is acting suspicious! %f %f\n", tv.tv_sec, lines[i].string, distance1, distance2);
